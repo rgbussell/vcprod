@@ -1,3 +1,4 @@
+import numpy as np
 import multiprocessing
 
 DO_ISMRM2019_NTIS_COMPARISON=1

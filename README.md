@@ -1,6 +1,7 @@
 # README #
 
 This is the product code for UCSD PICORE based vascular compliance
+It is a WIP!
 
 ### What is this repository for? ###
 

@@ -1,4 +1,6 @@
 #Data plotting functions
+import matplotlib.pyplot as plt
+import numpy as np
 
 def hello():
 	print('hello from' + __name__ +' in vc view module')

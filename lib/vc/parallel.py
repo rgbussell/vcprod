@@ -1,4 +1,5 @@
 import multiprocessing
+import numpy as np
 
 def makeTaskAllSlices(tasks,maskMat,id_dir,subDir,saveDir,M0=1,alpha=1,verbosity=1,dryRun=0,nTIs=5,nBins=8,mMethod=0):
     iSlice=0;nSlices=14

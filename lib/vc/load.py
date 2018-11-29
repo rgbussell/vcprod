@@ -76,19 +76,9 @@ def hello():
 #----
 #load for fitting
 #-------
-def loadPhiCSVecOneSlice(subDir,id_dir,iSlice,idxTagStart=0,idxCtrStart=1,nSlices=1,verbosity=1):
+def loadPhiCSVecOneSlice(subDir,id_dir,iSlice,idxTagStart=0,idxCtrStart=1,nSlices=14,verbosity=1):
     phiCSMat=VC_loadPhiCS(subDir,id_dir,verbosity=0)
     #Get the phiCS for this slice
-    if verbosity>0:
-        print('------ loadPhiCSVecOneSlice called -----')
-        print('loading data from subDir/id_dir:', subDir+'/'+id_dir)
-        print('slice (starting with 1)', iSlice)
-
-        print('phiCSMat shape: ', np.shape(phiCSMat))
-        print('assuming tags start at index',idxTagStart)
-        print('assuming ctrls start at index',idxCtrStart)
-        plt.plot(phiCSVec);
-        plt.title('$\phi_c^s$')
 
     phiCS=phiCSMat[(iSlice-1)::nSlices,:] #select a slice (incl. t and c, and TI)
     phiCSTag=phiCS[idxTagStart::2,:] #now only take tags for this slice
@@ -97,11 +87,22 @@ def loadPhiCSVecOneSlice(subDir,id_dir,iSlice,idxTagStart=0,idxCtrStart=1,nSlice
     #vectorize the inputs
     phiCSVecTagOneSlice=np.reshape(phiCSTag,(273,))
     phiCSVecCtrOneSlice=np.reshape(phiCSCtr,(273,))
+
+    if verbosity>0:
+        print('------ loadPhiCSVecOneSlice called -----')
+        print('loading data from subDir/id_dir:', subDir+'/'+id_dir)
+        print('slice (starting with 1)', iSlice)
+
+        print('phiCSMat shape: ', np.shape(phiCSMat))
+        print('assuming tags start at index',idxTagStart)
+        print('assuming ctrls start at index',idxCtrStart)
+        plt.plot(phiCSVecTagOneSlice);plt.plot(phiCSVecCtrOneSlice)
+        plt.title('$\phi_c^s$')
     
     return phiCSVecTagOneSlice,phiCSVecCtrOneSlice
 
 
-def loadDataToFit(picoreMat,x1f,x2f,y1f,y2f,zf,phiCSVecCurSlice,nBins=8,nTIs=5,verbosity=0):
+def loadDataToFit(picoreMat,x1f,x2f,y1f,y2f,zf,phiCSVecCurSlice,tiVec,nBins=8,nTIs=5,verbosity=0):
     # input:
     #   picoreMat [nX nY nZ ......
     #   zf is the slice (index starts with 1)
@@ -123,13 +124,12 @@ def loadDataToFit(picoreMat,x1f,x2f,y1f,y2f,zf,phiCSVecCurSlice,nBins=8,nTIs=5,v
 
     dataMat=np.reshape(mTagMCtrAvePatchBin5pt,(nX,nY,nBins,nTIs))
     
-    phiCSMat=VC_loadPhiCS(subDir,id_dir,verbosity=0)
+    #phiCSMat=VC_loadPhiCS(subDir,id_dir,verbosity=0)
 
     return dataMat
 
 
-def getMCtrAveMTagVol(subDir,id_dir):
-    nX=64;nY=64;nSlices=14;nReps=78;nTIs=7
+def getMCtrAveMTagVol(subDir,id_dir,nX=64,nY=64,nSlices=14,nReps=78,nTIs=7):
     picoreMat=np.zeros((nX,nY,nSlices,nReps,nTIs))
     picoreMat=VC_loadPicoreData(subDir, id_dir,verbosity=0)
     print('picoreMat shape: ',np.shape(picoreMat))

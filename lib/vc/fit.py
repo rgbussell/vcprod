@@ -14,6 +14,7 @@ from scipy import optimize
 from scipy.optimize import least_squares
 import time
 
+
 import sys
 def printf(format, *args):
     sys.stdout.write(format % args)
@@ -21,13 +22,15 @@ def printf(format, *args):
 import multiprocessing
 
 from .load import *
+from .view import sliceDataMontage,plot2DFit3Par
+from .model import getBolusModel
 
 #------
 #Fitting models
 #------
 
-fitfuncB=lambda p,tiVec:p[0]*2*M0*alpha*getBolusModel(transitDelay=p[1],sigma=p[2])[tiVec]
-errfuncB=lambda p,tiVec,dataVec:fitfuncB(p,tiVec)-dataVec
+#fitfuncB=lambda p,tiVec:p[0]*2*M0*alpha*getBolusModel(transitDelay=p[1],sigma=p[2])[tiVec]
+#errfuncB=lambda p,tiVec,dataVec:fitfuncB(p,tiVec)-dataVec
 
 #------
 #Fitting functions
@@ -62,6 +65,9 @@ def setInitialGuessB(dataVec,tiVec,M0=1,alpha=1,verbosity=1):
         print('setInitialGuessB has M0=',str(M0))
     if verbosity>2:
         print('setInitialGuess B has dataVec=',str(dataVec))
+
+    fitfuncB=lambda p,tiVec:p[0]*2*M0*alpha*getBolusModel(transitDelay=p[1],sigma=p[2])[tiVec]
+    errfuncB=lambda p,tiVec,dataVec:fitfuncB(p,tiVec)-dataVec
 
     
     tdLB=50;tdUB=800;td0=0.2*(tdLB+tdUB);
@@ -101,7 +107,10 @@ def fitB(dataMat,tiVec,saveDir,nTIsToFit,M0=1,alpha=1,saveFn='fitB',verbosity=1,
     nFitPars=3
     saveFnPartial=saveFn+'_partial'
     saveFnComplete=saveFn
-    
+   
+    fitfuncB=lambda p,tiVec:p[0]*2*M0*alpha*getBolusModel(transitDelay=p[1],sigma=p[2])[tiVec]
+    errfuncB=lambda p,tiVec,dataVec:fitfuncB(p,tiVec)-dataVec
+ 
     if 1:
         print('fitB called: saving output to', saveFnPartial)
         print('fitB has nTIsToFit=', str(nTIsToFit))
@@ -226,7 +235,7 @@ def getFitMask(dataVol,tiVec,M0=1,alpha=1,minMean=-1,verbosity=1):
     return fitMask
 
 
-def makeFitMaskFile(subDir,id_dir,brainMaskFn,nBins=8,nTIs=5,nSlices=14,nX=64,nY=64,nReps=78,minMean=-1,saveNii=1):
+def makeFitMaskFile(subDir,id_dir,brainMaskFn,tiVec,nBins=8,nTIs=5,nSlices=14,nX=64,nY=64,nReps=39,minMean=-1,saveNii=1):
     # use the brain mask and also screen each voxel to make a fit mask
     # ave the fit mask to a file and also return it.
     # Assum the images is 64x64x14 with 8 bins and 5 TIs
@@ -245,7 +254,7 @@ def makeFitMaskFile(subDir,id_dir,brainMaskFn,nBins=8,nTIs=5,nSlices=14,nX=64,nY
         picoreMat=np.zeros((nX,nY,nSlices,nReps,nTIs))
         picoreMat=VC_loadPicoreData(subDir, id_dir,verbosity=0)
         (phiCSVecOneSlice,junk)=loadPhiCSVecOneSlice(subDir,id_dir,iSlice+1,nSlices=nSlices,verbosity=0)
-        dataVol5pt[:,:,iSlice,:,:]=loadDataToFit(picoreMat,1,nX,1,nY,iSlice+1,phiCSVecOneSlice,nBins=8,nTIs=5)
+        dataVol5pt[:,:,iSlice,:,:]=loadDataToFit(picoreMat,1,nX,1,nY,iSlice+1,phiCSVecOneSlice,tiVec,nBins=8,nTIs=5)
 
     img=nib.load(brainMaskFn)
     brainMask=np.squeeze(img.get_data());
@@ -265,10 +274,7 @@ def makeFitMaskFile(subDir,id_dir,brainMaskFn,nBins=8,nTIs=5,nSlices=14,nX=64,nY
     
     return fitMask
 
-M0=1
-alpha=1
-
-def fitWithinMask(id_dir,subDir,mask,saveDir,M0=M0,alpha=alpha,verbosity=0,dryRun=0):
+def fitWithinMask(id_dir,subDir,mask,saveDir,M0=1,alpha=1,verbosity=0,dryRun=0):
     # volSz [5,] = (nX,nY,nSlices,nReps,nTIs)
     volSz=(64,64,14,78,7)
 
@@ -284,7 +290,7 @@ def fitWithinMask(id_dir,subDir,mask,saveDir,M0=M0,alpha=alpha,verbosity=0,dryRu
         (phiCSVecOneSlice,junk)=loadPhiCSVecOneSlice(subDir,id_dir,iSlice+1,verbosity=1)
         plt.figure(figsize=[40,5]);plt.plot(phiCSVecOneSlice,label='slice'+str(iSlice));
         plt.title('$\phi_c^s$',fontsize=30);plt.legend(fontsize=20);plt.show()
-        dataMat=loadDataToFit(picoreMat,1,nX,1,nY,iSlice+1,phiCSVecOneSlice,nBins=8,nTIs=5)
+        dataMat=loadDataToFit(picoreMat,1,nX,1,nY,iSlice+1,phiCSVecOneSlice,tiVec,nBins=8,nTIs=5)
         sliceDataMontage(dataMat)
         dataMatMasked=dataMat*np.tile(fitMask[:,:,iSlice,np.newaxis,np.newaxis],(1,1,8,5))
         sliceDataMontage(dataMatMasked)
@@ -294,7 +300,7 @@ def fitWithinMask(id_dir,subDir,mask,saveDir,M0=M0,alpha=alpha,verbosity=0,dryRu
         np.save(mseSaveFn,mseMat)
 
 
-def fitWithinMaskPar2p0_test(iSlice,id_dir,subDir,fitMask,saveDir,nTIsToFit,M0=M0,alpha=alpha,verbosity=0,dryRun=0,nBins=8,mMethod=0):
+def fitWithinMaskPar2p0_test(iSlice,id_dir,subDir,fitMask,saveDir,nTIsToFit,tiVec,nX=64,nY=64,nSlices=14,nTIs=7,nReps=39,M0=1,alpha=1,verbosity=0,dryRun=0,nBins=8,mMethod=0):
     #fitWithinMaskPar2p0_test(0, '119_180612', 'data/PupAlz_119',fitMask,'data/PupAlz_119/119_180612/vISMRM2019.0/7TIs/m0/', 7, 39, 1, 0, 0, 8, 0)
     # volSz [5,] = (nX,nY,nSlices,nReps,nTIs)
     #volSz=(64,64,14,78,7)
@@ -328,7 +334,7 @@ def fitWithinMaskPar2p0_test(iSlice,id_dir,subDir,fitMask,saveDir,nTIsToFit,M0=M
     (phiCSVecOneSlice,junk)=loadPhiCSVecOneSlice(subDir,id_dir,iSlice+1,verbosity=1)
     plt.figure(figsize=[40,5]);plt.plot(phiCSVecOneSlice,label='slice'+str(iSlice));
     plt.title('$\phi_c^s$',fontsize=30);plt.legend(fontsize=20);plt.show()
-    dataMat=loadDataToFit(picoreMat,1,nX,1,nY,iSlice+1,phiCSVecOneSlice,nBins=8,nTIs=nTIs)
+    dataMat=loadDataToFit(picoreMat,1,nX,1,nY,iSlice+1,phiCSVecOneSlice,tiVec,nBins=8,nTIs=nTIs)
     sliceDataMontage(dataMat)
     print('fitWithinMaskPar2p0_test: shape fitMask '+str(np.shape(fitMask)))
     dataMatMasked=dataMat*np.tile(fitMask[:,:,iSlice,np.newaxis,np.newaxis],(1,1,nBins,nTIs))

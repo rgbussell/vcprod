@@ -28,6 +28,8 @@ import numpy as np
 #main
 #-----------------------------
 
+FIT_MASK=0
+
 try:
     os.chdir(dataDir)
 except OSError:
@@ -99,7 +101,11 @@ pp=50;
 alpha=1;
 brainMaskFn=subDir+'/'+id_dir+'/reg/vti_mask.nii.gz'
 
-fitMask=makeFitMaskFile(subDir,id_dir,brainMaskFn,nBins=8,nTIs=5,minMean=0.2,nSlices=14,nReps=78)
+if FIT_MASK==1:
+    fitMask=makeFitMaskFile(subDir,id_dir,brainMaskFn,tiVec,nBins=8,nTIs=5,minMean=0.2,nSlices=14,nReps=78)
+if FIT_MASK==0:
+    fitMask=np.load(subDir+'/'+'fitMask.npy')
+    fitMask=np.reshape(fitMask,(nX,nY,nSlices))
 sliceDataMontage(fitMask[:,:,:,np.newaxis]);
 
 #----------------------
@@ -125,7 +131,7 @@ if DO_ISMRM2019_NTIS_COMPARISON:
     tasks=[]
 
     # set parameters that apply to all subjects
-    verbosity=0;dryRun=0
+    verbosity=0
     alpha=1
 
     id_dir='119_180612'
@@ -136,25 +142,6 @@ if DO_ISMRM2019_NTIS_COMPARISON:
 
     dryRun=0
 
-    #nTIsToFit=7
-    #saveDir=makeSaveDir(subDir,id_dir,version,nTIsToFit,mMethod=0)
-    #makeTaskAllSlices2p0test(tasks,id_dir,subDir,nTIsToFit,fitMask,saveDir,M0=M0,alpha=alpha,verbosity=0,dryRun=dryRun, nBins=8,mMethod=0)
-
-    tStart = time.time()
-    # Run tasks
-    if 0:
-        for t in tasks:
-            print('<<<<<<<<<will run this task>>>>>>>>>>')
-            #print(t)
-            results=pool.apply_async( fitWithinMaskPar2p0_test, t)
-    #results=pool.apply_async( fitWithinMaskPar2p0_test, t)
-    #pool.close()
-    #pool.join()
-
-    tEnd = time.time()
-    tElapsed=tEnd-tStart
-    print('********Parallel fitting jobs required '+str(tElapsed)+'seconds. *********')
-    
     pool = multiprocessing.Pool( nWorkers )
 
     #initialize the task list for each core
@@ -178,7 +165,7 @@ if DO_ISMRM2019_NTIS_COMPARISON:
     
     tStart = time.time()
     # Run tasks
-    if 1:
+    if 0:
         for t in tasks:
             print('<<<<<<<<<will run this task>>>>>>>>>>')
             #print(t)
@@ -192,7 +179,7 @@ if DO_ISMRM2019_NTIS_COMPARISON:
     tElapsed=tEnd-tStart
     print('********Parallel fitting jobs required '+str(tElapsed)+'seconds. *********')
 
-    #fitWithinMaskPar2p0_test(1,id_dir,subDir,fitMask,saveDir,nTIsToFit,M0=M0,alpha=alpha,verbosity=0,dryRun=dryRun,nBins=8,mMethod=0)
+    fitWithinMaskPar2p0_test(1,id_dir,subDir,fitMask,saveDir,nTIsToFit,tiVec,M0=M0,alpha=alpha,verbosity=0,dryRun=dryRun,nBins=8,mMethod=0)
     
     #fitWithinMaskPar2p0_test(0,id_dir,subDir,nTIsToFit,fitMask,saveDir,M0=M0,alpha=alpha,verbosity=0,dryRun=dryRun,nBins=8,mMethod=0)
     #fitWithinMaskPar2p0_test(0,id_dir,subDir,nTIsToFit,fitMask,saveDir,M0=M0,alpha=alpha,verbosity=0,dryRun=dryRun,nBins=8,mMethod=0)
