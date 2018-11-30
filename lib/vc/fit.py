@@ -322,6 +322,7 @@ def fitWithinMaskPar2p0_test(iSlice,id_dir,subDir,fitMask,saveDir,nTIsToFit,tiVe
         print('fitWithinMaskPar2p0_test has: nBins '+str(nBins))
         print('fitWithinMaskPar2p0_test has: mMethod '+str(mMethod))
         print('fitWithinMaskPar2p0_test has: saveFn '+str(saveFn))
+        print('fitWithinMaskPar2p0_test has: tiVec '+str(tiVec))
         
     #(nX,nY,nSlices,nReps,nTIs)=volSz
     #tiVecOne=np.arange(250,750,100)    

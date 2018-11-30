@@ -118,7 +118,7 @@ saveFn=''
 if DO_ISMRM2019_NTIS_COMPARISON:
     numProcessors=multiprocessing.cpu_count()
     #nWorkers=14*3
-    nWorkers=1
+    nWorkers=14
     if nWorkers>numProcessors:
         nWorkers=numProcessors-1
 
@@ -150,28 +150,29 @@ if DO_ISMRM2019_NTIS_COMPARISON:
     #set up the 7 point fits
     nTIsToFit=7
     saveDir=makeSaveDir(subDir,id_dir,version,nTIsToFit,mMethod=0)
-    makeTaskAllSlices2p0test(tasks,id_dir,subDir,nTIsToFit,fitMask,saveDir,M0=M0,alpha=alpha,verbosity=0,dryRun=dryRun,nBins=8,mMethod=0)
+    makeTaskAllSlices2p0test(tasks,id_dir,subDir,nTIsToFit,tiVec,fitMask,saveDir,M0=M0,alpha=alpha,verbosity=0,dryRun=dryRun,nBins=8,mMethod=0)
 
     #set up the 5 point fits
     nTIsToFit=5
     saveDir=makeSaveDir(subDir,id_dir,version,nTIsToFit,mMethod=0)
-    makeTaskAllSlices2p0test(tasks,id_dir,subDir,nTIsToFit,fitMask,saveDir,M0=M0,alpha=alpha,verbosity=0,dryRun=dryRun,nBins=8,mMethod=0)
+    makeTaskAllSlices2p0test(tasks,id_dir,subDir,nTIsToFit,tiVec,fitMask,saveDir,M0=M0,alpha=alpha,verbosity=0,dryRun=dryRun,nBins=8,mMethod=0)
 
     #set up the 3 point fits
     nTIsToFit=3
     saveDir=makeSaveDir(subDir,id_dir,version,nTIsToFit,mMethod=0)
-    makeTaskAllSlices2p0test(tasks,id_dir,subDir,nTIsToFit,fitMask,saveDir,M0=M0,alpha=alpha,verbosity=0,dryRun=dryRun,nBins=8,mMethod=0)
+    makeTaskAllSlices2p0test(tasks,id_dir,subDir,nTIsToFit,tiVec,fitMask,saveDir,M0=M0,alpha=alpha,verbosity=0,dryRun=dryRun,nBins=8,mMethod=0)
 
+    print('tiVec is ' + str(tiVec));
     
     tStart = time.time()
     # Run tasks
-    if 0:
+    if 1:
         for t in tasks:
             print('<<<<<<<<<will run this task>>>>>>>>>>')
-            #print(t)
+            print(t)
             results=pool.apply_async( fitWithinMaskPar2p0_test, t)
     #print(t)
-    #results=pool.apply_async( fitWithinMaskPar2p0_test, t)
+    results=pool.apply_async( fitWithinMaskPar2p0_test, t)
     pool.close()
     pool.join()
 
@@ -179,7 +180,13 @@ if DO_ISMRM2019_NTIS_COMPARISON:
     tElapsed=tEnd-tStart
     print('********Parallel fitting jobs required '+str(tElapsed)+'seconds. *********')
 
-    fitWithinMaskPar2p0_test(1,id_dir,subDir,fitMask,saveDir,nTIsToFit,tiVec,M0=M0,alpha=alpha,verbosity=0,dryRun=dryRun,nBins=8,mMethod=0)
+    print(tasks)
+
+
+    nTIsToFit=5
+    for iSlice in np.arange(0,14,1):
+        saveDir=makeSaveDir(subDir,id_dir,version,nTIsToFit,mMethod=0)
+        fitWithinMaskPar2p0_test(iSlice,id_dir,subDir,fitMask,saveDir,nTIsToFit,tiVec,M0=M0,alpha=alpha,verbosity=0,dryRun=dryRun,nBins=8,mMethod=0)
     
     #fitWithinMaskPar2p0_test(0,id_dir,subDir,nTIsToFit,fitMask,saveDir,M0=M0,alpha=alpha,verbosity=0,dryRun=dryRun,nBins=8,mMethod=0)
     #fitWithinMaskPar2p0_test(0,id_dir,subDir,nTIsToFit,fitMask,saveDir,M0=M0,alpha=alpha,verbosity=0,dryRun=dryRun,nBins=8,mMethod=0)
