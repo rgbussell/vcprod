@@ -1,0 +1,16 @@
+#!/bin/sh
+
+#docker run -d -p 8888:8888 -v /Users/rbussell/vcproc/:/home/ds/notebooks rgbussell/vc
+
+#docker run -d -v /Users/rbussell/vcproc/:/home/ds/notebooks rgbussell/vc
+#containerId=`docker ps | grep rgbussell/vc | awk '{print $1}'`
+
+#docker exec -it $containerId /opt/ds//bin/complianceAnalysis/runVC.sh
+
+#containerId=`docker images | awk '{print $1, $2, $3}' | grep rgbussell/vc | grep latest  | awk '{print $3}'`
+#docker exec -it rgbussell/vc /opt/ds//bin/vc/runVC.sh
+
+#docker exec -it $containerId /opt/ds//bin/vc/vcTestHello.py
+
+
+docker run -d -v /Users/rbussell/vcproc/:/home/ds/notebooks rgbussell/vc:latest
