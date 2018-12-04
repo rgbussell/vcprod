@@ -1,10 +1,6 @@
 #!/bin/sh
 
-#docker run -d -p 8888:8888 -v /Users/rbussell/vcproc/:/home/ds/notebooks rgbussell/vc
+containerName="rgbussell/vc:latest"
 
-#docker run -d -v /Users/rbussell/vcproc/:/home/ds/notebooks rgbussell/vc
-#containerId=`docker ps | grep rgbussell/vc | grep latest | awk '{print $1}'`
-#containerId=`docker images | awk '{print $1, $2, $3}' | grep rgbussell/vc | grep latest  | awk '{print $3}'`
-
-containerId=`docker ps | grep " rgbussell/vc:latest " | awk '{print $1, $2}' | awk '{print $1}'`
+containerId=`docker ps | grep $containerName | awk '{print $1, $2}' | awk '{print $1}'`
 docker exec -it $containerId /bin/bash

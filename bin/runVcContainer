@@ -1,16 +1,18 @@
 #!/bin/sh
 
-#docker run -d -p 8888:8888 -v /Users/rbussell/vcproc/:/home/ds/notebooks rgbussell/vc
+host=`hostname`
+dockerName="rgbussell/vc:latest"
+remoteShare="/home/ds/notebooks"
 
-#docker run -d -v /Users/rbussell/vcproc/:/home/ds/notebooks rgbussell/vc
-#containerId=`docker ps | grep rgbussell/vc | awk '{print $1}'`
+if [ `hostname` = "fmrisaturn.ucsd.edu"  ];then
+  localShare=/Users/rbussell/vcproc/
+fi
 
-#docker exec -it $containerId /opt/ds//bin/complianceAnalysis/runVC.sh
+if [ `hostname` = "ip-172-31-3-181"  ];then
+  localShare=/Users/rbussell/vcproc/
+fi
 
-#containerId=`docker images | awk '{print $1, $2, $3}' | grep rgbussell/vc | grep latest  | awk '{print $3}'`
-#docker exec -it rgbussell/vc /opt/ds//bin/vc/runVC.sh
+echo running $dockerName
+echo local share is $localShare
 
-#docker exec -it $containerId /opt/ds//bin/vc/vcTestHello.py
-
-
-docker run -d -v /Users/rbussell/vcproc/:/home/ds/notebooks rgbussell/vc:latest
+docker run -d -v $localShare:$remoteShare $dockerName
