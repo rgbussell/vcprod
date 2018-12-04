@@ -13,7 +13,7 @@ if [ `hostname` = "ip-172-31-3-181"  ];then
 fi
 
 if [ `hostname` = "fmri1.ucsd.edu"  ];then
-  localShare=/home/rbussell/data/vcproc/
+  localShare=/rpool/home/rbussell/data/vcproc/
 fi
 
 echo running $dockerName
