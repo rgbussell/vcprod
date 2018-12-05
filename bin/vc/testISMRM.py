@@ -4,19 +4,25 @@
 import os
 #---------------
 import sys
-vcModulePath='/opt/ds/lib/'
+vcModulePath='/home/rbussell/lib/'
 sys.path.append(vcModulePath)
 
+import importlib
+
 import vc
+
 from vc.load import *
 from vc.parallel import *
 from vc.fileutils import *
 from vc.fit import *
 
+importlib.reload(vc)
+
+
 #------
 #path stuff
 #-------
-dataDir='/home/ds/notebooks/'
+dataDir='/home/rbussell/notebooks/vcproc/'
 
 #----------------------------
 #These are needed for running this specific code
@@ -90,7 +96,6 @@ mCtrVec=np.reshape(mCtr,(nX,nY,nSlices,int(nTIs*nReps/2)))
 #deltaMSeqVec=mCtrVec[x,y,z,:]-mTagVec[x,y,z,:]
 dataVec=mTagMCtrAveVec
 
-
 #---------------------
 #Create a mask for the data
 #--------------------
@@ -107,6 +112,11 @@ if FIT_MASK==0:
     fitMask=np.load(subDir+'/'+'fitMask.npy')
     fitMask=np.reshape(fitMask,(nX,nY,nSlices))
 sliceDataMontage(fitMask[:,:,:,np.newaxis]);
+
+print('shape fitMask: '+str(np.shape(fitMask)))
+# set parameters that apply to all subjects
+verbosity=0
+dryRun=0
 
 #----------------------
 #Run the fitting code on the ISMRM 2019 data
@@ -130,18 +140,6 @@ if DO_ISMRM2019_NTIS_COMPARISON:
     #initialize the task list for each core
     tasks=[]
 
-    # set parameters that apply to all subjects
-    verbosity=0
-    alpha=1
-
-    id_dir='119_180612'
-    subDir='data/PupAlz_119'
-    M0=39;
-    pp=50;
-    alpha=1;
-
-    dryRun=0
-
     pool = multiprocessing.Pool( nWorkers )
 
     #initialize the task list for each core
@@ -150,17 +148,18 @@ if DO_ISMRM2019_NTIS_COMPARISON:
     #set up the 7 point fits
     nTIsToFit=7
     saveDir=makeSaveDir(subDir,id_dir,version,nTIsToFit,mMethod=0)
-    makeTaskAllSlices2p0test(tasks,id_dir,subDir,nTIsToFit,tiVec,fitMask,saveDir,M0=M0,alpha=alpha,verbosity=0,dryRun=dryRun,nBins=8,mMethod=0)
+    makeTaskAllSlices(tasks,id_dir,subDir,saveDir,fitMask,tiVec,nX=64,nY=64,nSlices=14,nBins=8,nTIs=7,nReps=39,nTIsToFit=5,M0=M0,alpha=alpha,mMethod=0,dryRun=0,verbosity=2)
+    #makeTaskAllSlices2p0test(tasks,id_dir,subDir,nTIsToFit,tiVec,fitMask,saveDir,M0=M0,alpha=alpha,verbosity=0,dryRun=dryRun,nBins=8,mMethod=0)
 
     #set up the 5 point fits
-    nTIsToFit=5
-    saveDir=makeSaveDir(subDir,id_dir,version,nTIsToFit,mMethod=0)
-    makeTaskAllSlices2p0test(tasks,id_dir,subDir,nTIsToFit,tiVec,fitMask,saveDir,M0=M0,alpha=alpha,verbosity=0,dryRun=dryRun,nBins=8,mMethod=0)
+    #nTIsToFit=5
+    #saveDir=makeSaveDir(subDir,id_dir,version,nTIsToFit,mMethod=0)
+    #makeTaskAllSlices2p0test(tasks,id_dir,subDir,nTIsToFit,tiVec,fitMask,saveDir,M0=M0,alpha=alpha,verbosity=0,dryRun=dryRun,nBins=8,mMethod=0)
 
     #set up the 3 point fits
-    nTIsToFit=3
-    saveDir=makeSaveDir(subDir,id_dir,version,nTIsToFit,mMethod=0)
-    makeTaskAllSlices2p0test(tasks,id_dir,subDir,nTIsToFit,tiVec,fitMask,saveDir,M0=M0,alpha=alpha,verbosity=0,dryRun=dryRun,nBins=8,mMethod=0)
+    #nTIsToFit=3
+    #saveDir=makeSaveDir(subDir,id_dir,version,nTIsToFit,mMethod=0)
+    #makeTaskAllSlices2p0test(tasks,id_dir,subDir,nTIsToFit,tiVec,fitMask,saveDir,M0=M0,alpha=alpha,verbosity=0,dryRun=dryRun,nBins=8,mMethod=0)
 
     print('tiVec is ' + str(tiVec));
     
@@ -168,26 +167,21 @@ if DO_ISMRM2019_NTIS_COMPARISON:
     # Run tasks
     if 1:
         for t in tasks:
-            print('<<<<<<<<<will run this task>>>>>>>>>>')
+            #print('<<<<<<<<<will run this task>>>>>>>>>>')
             print(t)
-            results=pool.apply_async( fitWithinMaskPar2p0_test, t)
+            results=pool.apply_async( fitWithinMaskPar, t)
     #print(t)
-    results=pool.apply_async( fitWithinMaskPar2p0_test, t)
+    #results=pool.apply_async( fitWithinMaskPar2p0_test, t)
+    
+    #print(pool.map())
     pool.close()
     pool.join()
 
+    
     tEnd = time.time()
     tElapsed=tEnd-tStart
     print('********Parallel fitting jobs required '+str(tElapsed)+'seconds. *********')
 
-    print(tasks)
+    #print(tasks)
 
-
-    nTIsToFit=5
-    for iSlice in np.arange(0,14,1):
-        saveDir=makeSaveDir(subDir,id_dir,version,nTIsToFit,mMethod=0)
-        fitWithinMaskPar2p0_test(iSlice,id_dir,subDir,fitMask,saveDir,nTIsToFit,tiVec,M0=M0,alpha=alpha,verbosity=0,dryRun=dryRun,nBins=8,mMethod=0)
-    
-    #fitWithinMaskPar2p0_test(0,id_dir,subDir,nTIsToFit,fitMask,saveDir,M0=M0,alpha=alpha,verbosity=0,dryRun=dryRun,nBins=8,mMethod=0)
-    #fitWithinMaskPar2p0_test(0,id_dir,subDir,nTIsToFit,fitMask,saveDir,M0=M0,alpha=alpha,verbosity=0,dryRun=dryRun,nBins=8,mMethod=0)
-
+#fitWithinMaskPar(1, '119_180612', 'data/PupAlz_119',fitMask,'data/PupAlz_119/119_180612/vcontainertest/7TIs/m0/', 64, 64, 14, 8, 39, 7, 5,tiVec, 39, 1, 0, 0, 2)

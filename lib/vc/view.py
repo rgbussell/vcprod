@@ -345,13 +345,3 @@ def sliceDataMontage(dataMat,fs=(40,10)):
     plt.xticks([]);plt.yticks([]);plt.title('single slice data')
     plt.colorbar();
     plt.show()
-    
-def sliceDataMontage0ld(dataMat):
-    dataMat=np.reshape(np.transpose(dataMat,(0,2,1,3)),(45,45*8,5))
-    dataMat=np.reshape( np.transpose(dataMat,(2,0,1) ),(45*5,45*8))
-    plt.imshow(dataMat)
-    plt.xlabel('bins',fontsize=15);plt.ylabel('TIs',fontsize=15)
-    plt.xticks([]);plt.yticks([]);plt.title('single slice data')
-    plt.show()
-
-
