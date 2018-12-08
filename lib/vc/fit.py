@@ -1,6 +1,6 @@
-def hello():
-	print('hello from' + __name__ +' in vc fit module')
-
+FIGURES_ON=0
+FIGURES_ONSCREEN=0
+FIGURES_SAVED=0
 
 import os
 import numpy as np
@@ -24,6 +24,7 @@ import multiprocessing
 from .load import *
 from .view import sliceDataMontage,plot2DFit3Par
 from .model import getBolusModel
+
 
 #------
 #Fitting models
@@ -205,7 +206,7 @@ def getFitMask(dataVol,tiVec,M0=1,alpha=1,minMean=-1,verbosity=1):
     #     value is 1 if data passes
     #
     STAT_GOOD=1
-
+    print('getFitMask called')
     (nX,nY,nSlices,nBins,nTIs)=np.shape(dataVol)
     dataVol=np.reshape(dataVol,(nX*nY*nSlices,nBins,nTIs))
     nVox=nX*nY*nSlices
@@ -239,11 +240,9 @@ def getFitMask(dataVol,tiVec,M0=1,alpha=1,minMean=-1,verbosity=1):
 def makeFitMaskFile(subDir,id_dir,brainMaskFn,tiVec,nBins=8,nTIs=5,nSlices=14,nX=64,nY=64,nReps=39,minMean=-1,saveNii=1):
     # use the brain mask and also screen each voxel to make a fit mask
     # ave the fit mask to a file and also return it.
-    # Assum the images is 64x64x14 with 8 bins and 5 TIs
     
     dataVol5pt=np.zeros((nX,nY,nSlices,nBins,nTIs))
     fitMask=np.zeros((nX,nY,nSlices))
-    #print('tiVec: ',tiVec)
 
     tiArr=np.arange(250,950,100)
     tiVec=np.reshape(np.tile(tiArr,(np.int(np.floor(nReps/2)),1)),(273,))
@@ -275,31 +274,38 @@ def makeFitMaskFile(subDir,id_dir,brainMaskFn,tiVec,nBins=8,nTIs=5,nSlices=14,nX
     
     return fitMask
 
-def fitWithinMask(id_dir,subDir,mask,saveDir,M0=1,alpha=1,verbosity=0,dryRun=0):
-    # volSz [5,] = (nX,nY,nSlices,nReps,nTIs)
-    volSz=(64,64,14,78,7)
-
-    #(nX,nY,nSlices,nReps,nTIs)=volSz
-    tiVecOne=np.arange(250,750,100)    
-    picoreMat=np.zeros((nX,nY,nSlices,nReps,nTIs))
-    picoreMat=VC_loadPicoreData(subDir, id_dir,verbosity=0)
-    
-    for iSlice in np.arange(0,3,1):
-        print('.......fitWithinMask setting up fit data for slice ',iSlice,'..............')
-        saveFn=saveDir+'fitB_slice'+str(iSlice)
-        mseSaveFn=saveDir+'mse_slice'+str(iSlice)   
-        (phiCSVecOneSlice,junk)=loadPhiCSVecOneSlice(subDir,id_dir,iSlice+1,verbosity=1)
-        plt.figure(figsize=[40,5]);plt.plot(phiCSVecOneSlice,label='slice'+str(iSlice));
-        plt.title('$\phi_c^s$',fontsize=30);plt.legend(fontsize=20);plt.show()
-        dataMat=loadDataToFit(picoreMat,1,nX,1,nY,iSlice+1,phiCSVecOneSlice,tiVec,nBins=8,nTIs=5)
-        sliceDataMontage(dataMat)
-        dataMatMasked=dataMat*np.tile(fitMask[:,:,iSlice,np.newaxis,np.newaxis],(1,1,8,5))
-        sliceDataMontage(dataMatMasked)
-        fitVec,mseMat=fitB(dataMatMasked,tiVec,M0=M0,alpha=alpha,saveFn=saveFn,verbosity=verbosity,dryRun=dryRun)
-        plot2DFit3Par(fitVec,fitMatType=0)
-        np.save(saveFn,fitVec)
-        np.save(mseSaveFn,mseMat)
-
+#def fitWithinMask(id_dir,subDir,mask,saveDir,M0=1,alpha=1,verbosity=0,dryRun=0):
+#    # volSz [5,] = (nX,nY,nSlices,nReps,nTIs)
+#    volSz=(64,64,14,78,7)
+#
+#    #(nX,nY,nSlices,nReps,nTIs)=volSz
+#    tiVecOne=np.arange(250,750,100)    
+#    picoreMat=np.zeros((nX,nY,nSlices,nReps,nTIs))
+#    picoreMat=VC_loadPicoreData(subDir, id_dir,verbosity=0)
+#    
+#    for iSlice in np.arange(0,3,1):
+##        print('.......fitWithinMask setting up fit data for slice ',iSlice,'..............')
+#        saveFn=saveDir+'fitB_slice'+str(iSlice)
+#        mseSaveFn=saveDir+'mse_slice'+str(iSlice)   
+#        (phiCSVecOneSlice,junk)=loadPhiCSVecOneSlice(subDir,id_dir,iSlice+1,verbosity=1)
+#        if FIGURES_ON:
+#            plt.figure(figsize=[40,5]);plt.plot(phiCSVecOneSlice,label='slice'+str(iSlice));
+##            plt.title('$\phi_c^s$',fontsize=30);plt.legend(fontsize=20);
+#        if FIGURES_ONSCREEN:
+#            plt.ion();plt.show()
+        #if FIGURES_SAVED:
+        #    figFn='phics_s'+str(iSlice)+'.pdf'
+        #    plt.savefig(figFn);
+#        dataMat=loadDataToFit(picoreMat,1,nX,1,nY,iSlice+1,phiCSVecOneSlice,tiVec,nBins=8,nTIs=5)
+#        if FIGURES_ON:
+#            sliceDataMontage(dataMat)
+#       dataMatMasked=dataMat*np.tile(fitMask[:,:,iSlice,np.newaxis,np.newaxis],(1,1,8,5))
+#        if FIGURES_ON:
+#            sliceDataMontage(dataMatMasked)
+#        fitVec,mseMat=fitB(dataMatMasked,tiVec,M0=M0,alpha=alpha,saveFn=saveFn,verbosity=verbosity,dryRun=dryRun)
+#        plot2DFit3Par(fitVec,fitMatType=0)
+#        np.save(saveFn,fitVec)
+#        np.save(mseSaveFn,mseMat)
 
 def fitWithinMaskPar(iSlice,id_dir,subDir,fitMask,saveDir,nX,nY,nSlices,nBins,nReps,nTIs,nTIsToFit,tiVec,M0,alpha,mMethod,dryRun,verbosity):
     """"Load data, take a mask as input and call the fit function in a way that is suitable for MP execution."""
@@ -330,16 +336,19 @@ def fitWithinMaskPar(iSlice,id_dir,subDir,fitMask,saveDir,nX,nY,nSlices,nBins,nR
     print('.......fitWithinMask setting up fit data for slice ',iSlice,'..............')
   
     (phiCSVecOneSlice,junk)=loadPhiCSVecOneSlice(subDir,id_dir,iSlice+1,verbosity=1)
-    plt.figure(figsize=[40,5]);plt.plot(phiCSVecOneSlice,label='slice'+str(iSlice));
-    plt.title('$\phi_c^s$',fontsize=30);plt.legend(fontsize=20);plt.show()
+    if 0:
+        plt.figure(figsize=[40,5]);plt.plot(phiCSVecOneSlice,label='slice'+str(iSlice));
+        plt.title('$\phi_c^s$',fontsize=30);plt.legend(fontsize=20);plt.ion();plt.show()
     dataMat=loadDataToFit(picoreMat,1,nX,1,nY,iSlice+1,phiCSVecOneSlice,tiVec,nBins=8,nTIs=nTIs)
-    sliceDataMontage(dataMat)
+    if 0:
+        sliceDataMontage(dataMat)
     if verbosity>1:
         print('fitWithinMaskPar: shape fitMask '+str(np.shape(fitMask)))
         print('fitWithinMaskPar: shape dataMat '+str(np.shape(dataMat)))
         print('fitWithinMaskPar: before masking')
     dataMatMasked=dataMat[:,:,:,0:nTIsToFit:1]*np.tile(fitMask[:,:,iSlice,np.newaxis,np.newaxis],(1,1,nBins,nTIsToFit))
-    sliceDataMontage(dataMatMasked)
+    if FIGURES_ONSCREEN:
+        sliceDataMontage(dataMatMasked)
     if verbosity>1:
         print('saveDir is '+str(saveDir))
         print('dataMatMasked is shape '+str(np.shape(dataMatMasked))+' sum '+str(np.sum(dataMatMasked)))
@@ -351,5 +360,6 @@ def fitWithinMaskPar(iSlice,id_dir,subDir,fitMask,saveDir,nX,nY,nSlices,nBins,nR
         print('------------------------------')
     if 1:
         fitVec,mseMat=fitB(dataMatMasked,tiVec,saveDir,nTIsToFit,M0=M0,alpha=alpha,saveFn=saveFn,verbosity=verbosity,dryRun=dryRun)
-        plot2DFit3Par(fitVec,fitMatType=0)
+        if 0:
+            plot2DFit3Par(fitVec,fitMatType=0)
 

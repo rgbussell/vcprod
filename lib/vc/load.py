@@ -97,8 +97,8 @@ def loadPhiCSVecOneSlice(subDir,id_dir,iSlice,idxTagStart=0,idxCtrStart=1,nSlice
         print('phiCSMat shape: ', np.shape(phiCSMat))
         print('assuming tags start at index',idxTagStart)
         print('assuming ctrls start at index',idxCtrStart)
-        plt.plot(phiCSVecTagOneSlice);plt.plot(phiCSVecCtrOneSlice)
-        plt.title('$\phi_c^s$')
+        #plt.plot(phiCSVecTagOneSlice);plt.plot(phiCSVecCtrOneSlice)
+        #plt.title('$\phi_c^s$')
     
     return phiCSVecTagOneSlice,phiCSVecCtrOneSlice
 
@@ -109,20 +109,20 @@ def loadDataToFit(picoreMat,x1f,x2f,y1f,y2f,zf,phiCSVecCurSlice,tiVec,nBins=8,nT
     #   zf is the slice (index starts with 1)
 
     if verbosity>=5:
-        print('loadDatToFit has picoreMat shape: ',str(np.shape(picoreMat)) )   
-        print('loadDatToFit has x1f,x2f,y1f,y2f: ',str(x1f),str(x2f),str(y1f),str(y2f) )   
-        print('loadDatToFit has zf: ',str(zf) ) 
-        print('loadDatToFit has phiCSVecCurSlice shape: ',str(np.shape(phiCSVecCurSlice)) )   
-        print('loadDatToFit has tiVec shape: ',str(np.shape(tiVec)) )
-        print('loadDatToFit has nBins: ',str(nBins) )
-        print('loadDatToFit has nTIs: ',str(nTIs) )
+        print('loadDataToFit has picoreMat shape: ',str(np.shape(picoreMat)) )   
+        print('loadDataToFit has x1f,x2f,y1f,y2f: ',str(x1f),str(x2f),str(y1f),str(y2f) )   
+        print('loadDataToFit has zf: ',str(zf) ) 
+        print('loadDataToFit has phiCSVecCurSlice shape: ',str(np.shape(phiCSVecCurSlice)) )   
+        print('loadDataToFit has tiVec shape: ',str(np.shape(tiVec)) )
+        print('loadDataToFit has nBins: ',str(nBins) )
+        print('loadDataToFit has nTIs: ',str(nTIs) )
  
     nX=x2f-x1f+1
     nY=y2f-y1f+1
 
     mTagMCtrAvePatch=getMTagMCtrAvePatch(picoreMat,x1f,x2f,y1f,y2f,zf,zf)
     #if verbosity>0:
-    #    plt.imshow(np.reshape(mTagMCtrAvePatch,(45,45,7*39))[:,:,1]);plt.title('from getMTagMCtrAvePatch');plt.show()
+    #    plt.imshow(np.reshape(mTagMCtrAvePatch,(45,45,7*39))[:,:,1]);plt.title('from getMTagMCtrAvePatch');plt.ion();plt.show()
     mTagMCtrAvePatchBin=binAPatch(mTagMCtrAvePatch,tiVec,phiCSVecCurSlice,nBins=8)
 
     nVox=np.shape(mTagMCtrAvePatchBin)[0]
@@ -135,7 +135,8 @@ def loadDataToFit(picoreMat,x1f,x2f,y1f,y2f,zf,phiCSVecCurSlice,tiVec,nBins=8,nT
     dataMat=np.reshape(mTagMCtrAvePatchBin5pt,(nX,nY,nBins,nTIs))
     
     #phiCSMat=VC_loadPhiCS(subDir,id_dir,verbosity=0)
-
+    print('loadDataToFit has dataMat shape', np.shape(dataMat));
+    print('returning from loadDataToFit')
     return dataMat
 
 

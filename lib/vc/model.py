@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import math as math
 
+FIGURES_ONSCREEN=0
+
 def picoreComplianceModelDeltaM_t(to,td,tau,abv,sigma,T1b=1660,alpha=0.95,M0=1):
     # td: transit delay (msec)
     # abv: blood volume (mL)
@@ -90,7 +92,7 @@ def getBolusModel(nPts=4000,bolusDuration=700,transitDelay=400,sigma=100,T1b=166
     if norm==1:
         bolus=bolus/(np.max(bolus))
     
-    if plotFlag==1:
+    if plotFlag==1 and FIGURES_ONSCREEN:
         #plt.plot(dispKernel/np.max(dispKernel),label="kernel/max kernel")
         #plt.plot(plug/np.max(plug),'o',label="plug/max plug")
         #plt.plot(bolus/(np.max(bolus)),'g.',label="bolus model/max bolus")
@@ -99,10 +101,9 @@ def getBolusModel(nPts=4000,bolusDuration=700,transitDelay=400,sigma=100,T1b=166
         plt.plot(bolus,'g.',label="bolus model")
         #plt.plot(notDispKernel/np.max(notDispKernel),'r',label="NOT kernel")
         #plt.plot(notBolus/(np.max(notBolus)),'r*',label="NOT bolus model")
-
-        
+     
         plt.title("transit delay="+str(transitDelay)+" msec, dispersion="+str(sigma)+" msec, bolusDuration=" +str(bolusDuration)+" msec")
-        plt.grid();plt.legend();plt.show()
+        plt.grid();plt.legend();plt.ion();plt.show()
         print("integral under gaussian" + str(np.sum(dispKernel)))
         
     return bolus
