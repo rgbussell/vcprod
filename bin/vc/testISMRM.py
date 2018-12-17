@@ -2,9 +2,7 @@
 
 print('testISMRM.py called')
 #Set up the imports
-import os
-#---------------
-import sys
+import os,sys
 vcModulePath='/home/rbussell/lib/'
 sys.path.append(vcModulePath)
 
@@ -16,8 +14,6 @@ from vc.load import *
 from vc.parallel import *
 from vc.fileutils import *
 from vc.fit import *
-
-importlib.reload(vc)
 
 
 #------

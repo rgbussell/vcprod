@@ -16,6 +16,7 @@ def printf(format, *args):
 
 from .binning import *
 
+regDir='reg'
 #----------
 #Data loading and plotting helper functions
 #---------
@@ -28,7 +29,7 @@ def VC_loadPicoreData(subDir,id_dir,verbosity=1):
         import os
         print(os.getcwd())
     nDummy=2
-    dataDir=subDir+'/'+id_dir+"/reg";
+    dataDir=subDir+'/'+id_dir+'/'+regDir+'/';
     tiArr=np.arange(250,950,100)
     aslMat=np.zeros([64,64,14,78,7])
     cnt=0;
@@ -54,7 +55,8 @@ def VC_loadPhiCS(subDir,id_dir,verbosity=1):
     tiArr=np.arange(250,950,100)
     subnum=id_dir[0:3];
     physMonDir='PhysMon'
-    poxOrderPrefix='PhysPars_'+str(subnum)+'_TI'
+    poxOrderPrefix='PhysPars_TI'
+    #poxOrderPrefix='PhysPars_'+str(subnum)+'_TI'
     poxOrderPostfix='_pOxPhaseAtSlice.dat'
     phiCSMat=np.zeros((nSlices*78,7))
     cnt=0;
@@ -109,13 +111,11 @@ def loadDataToFit(picoreMat,x1f,x2f,y1f,y2f,zf,phiCSVecCurSlice,tiVec,nBins=8,nT
     #   zf is the slice (index starts with 1)
 
     if verbosity>=5:
-        print('loadDataToFit has picoreMat shape: ',str(np.shape(picoreMat)) )   
-        print('loadDataToFit has x1f,x2f,y1f,y2f: ',str(x1f),str(x2f),str(y1f),str(y2f) )   
-        print('loadDataToFit has zf: ',str(zf) ) 
-        print('loadDataToFit has phiCSVecCurSlice shape: ',str(np.shape(phiCSVecCurSlice)) )   
-        print('loadDataToFit has tiVec shape: ',str(np.shape(tiVec)) )
-        print('loadDataToFit has nBins: ',str(nBins) )
-        print('loadDataToFit has nTIs: ',str(nTIs) )
+        print('loadDataToFit has picoreMat shape: ',str(np.shape(picoreMat)),' sum ',str(np.sum(picoreMat)) )   
+        print(' ... has x1f,x2f,y1f,y2f: ',str(x1f),str(x2f),str(y1f),str(y2f) )   
+        print(' ... has zf: ',str(zf) ) 
+        print(' ... has phiCSVecCurSlice shape: ',str(np.shape(phiCSVecCurSlice)) )   
+        print(' ... has tiVec shape: ',str(np.shape(tiVec)), ' ... nBins, nTIs: ',str(nBins),' ',str(nTIs) )
  
     nX=x2f-x1f+1
     nY=y2f-y1f+1
@@ -135,7 +135,7 @@ def loadDataToFit(picoreMat,x1f,x2f,y1f,y2f,zf,phiCSVecCurSlice,tiVec,nBins=8,nT
     dataMat=np.reshape(mTagMCtrAvePatchBin5pt,(nX,nY,nBins,nTIs))
     
     #phiCSMat=VC_loadPhiCS(subDir,id_dir,verbosity=0)
-    print('loadDataToFit has dataMat shape', np.shape(dataMat));
+    print('loadDataToFit has dataMat shape', np.shape(dataMat), ' sum ', str(np.sum(dataMat)));
     print('returning from loadDataToFit')
     return dataMat
 

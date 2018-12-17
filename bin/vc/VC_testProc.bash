@@ -1,5 +1,5 @@
 #!/bin/bash
-logFn="VC_runProc.log"
+logFn="VC_testProc.log"
 sm="$0:"
 echo $sm called. SHELL=$SHELL. Running in hostname `hostname`
 
@@ -24,4 +24,4 @@ which python
 python --version
 
 echo run the processing python code
-~/bin/vc/VC_runProc.py $procDir $M0 $pp $uid
+~/bin/vc/VC_testProc.py $procDir $M0 $pp $uid

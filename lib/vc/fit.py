@@ -38,8 +38,12 @@ from .model import getBolusModel
 #
 
 def checkBounds(p,pUB,pLB):
+    verbosity=1
+    if verbosity>0:
+        print('checkBounds: called')
     if np.sum(np.abs(np.where(pUB<pLB)))>0:
         return 0
+        print('checkBounds: bad bounds')
     else:
         return 1
     
@@ -79,14 +83,16 @@ def setInitialGuessB(dataVec,tiVec,M0=1,alpha=1,verbosity=1):
     p0[1]=td0;                             pLB[1]=tdLB;               pUB[1]=tdUB;       pScale[1]=p0[1]
     p0[2]=sigma0;                          pLB[2]=sigmaLB;            pUB[2]=sigmaUB;    pScale[2]=p0[2]
 
-    fsWide=[40,10]
-
-    if verbosity>0:
-        plt.figure(figsize=fsWide)
-        plt.plot(dataVec,label='data')
-        plt.plot(fitfuncB(p0,tiVec),label='B initial guess');
-        plt.title('model B\nabv='+str(p0[0])+'td='+str(p0[1])+' $\sigma=$'+str(p0[2]),fontsize=25)
-        plt.legend(fontsize=25)
+    print('setInitialGuessB about to return')
+#    fsWide=[40,10]
+#
+#    if FIGURES_ON==1:
+#        if verbosity>0:
+#            plt.figure(figsize=fsWide)
+#            plt.plot(dataVec,label='data')
+#            plt.plot(fitfuncB(p0,tiVec),label='B initial guess');
+#            plt.title('model B\nabv='+str(p0[0])+'td='+str(p0[1])+' $\sigma=$'+str(p0[2]),fontsize=25)
+#            plt.legend(fontsize=25)
         
     return p0,pUB,pLB,pScale
 
@@ -94,7 +100,7 @@ def setInitialGuessB(dataVec,tiVec,M0=1,alpha=1,verbosity=1):
 #perform the fit
 #--------
 
-def fitB(dataMat,tiVec,saveDir,nTIsToFit,M0=1,alpha=1,saveFn='fitB',verbosity=1,dryRun=0):
+def fitB(dataMat,tiVec,saveDir,nTIsToFit,M0=1,alpha=1,saveFn='fitB',verbosity=5,dryRun=0):
     #input data: 
     #   dataMat   [nX nY nBins nTIs]
     #   tiVec     [nTIs]
@@ -114,15 +120,12 @@ def fitB(dataMat,tiVec,saveDir,nTIsToFit,M0=1,alpha=1,saveFn='fitB',verbosity=1,
  
     if 1:
         print('fitB called: dataMat has shape '+str(np.shape(dataMat))+' sum '+str(np.sum(dataMat)))
-        print('fitB called: saving output to',saveFnPartial)
-        print('fitB has nTIsToFit=', str(nTIsToFit))
-        print('fitB has saveDir='+ saveDir)
-        print('fitB has tiVec='+str(tiVec))
-        print('fitB has M0='+ str(M0))
-        print('fitB has alpha='+ str(alpha))
-        print('fitB has saveFn='+ saveFn)
-        print('fitB has verbosity='+ str(verbosity))
-        print('fitB has dryRun='+ str(dryRun))
+        print('... saving output to',saveFnPartial)
+        print('... has saveDir='+ saveDir)
+        print('... has tiVec shape='+str(np.shape(tiVec)))
+        print('... has M0,alpha,nTIsToFit,dryRun', str(M0),str(alpha),str(nTIsToFit),str(dryRun))
+        print('... has saveFn='+ saveFn)
+        print('... has dryRun='+ str(dryRun))
     
     (nX,nY,nBins,nTIs)=np.shape(dataMat)
     nVox=nX*nY
@@ -138,6 +141,7 @@ def fitB(dataMat,tiVec,saveDir,nTIsToFit,M0=1,alpha=1,saveFn='fitB',verbosity=1,
         doFit=1
         if dryRun:
             doFit=0
+        #printf('dofit is %d',doFit);
             
         dataOneVoxel=np.reshape(dataMat[iVox,:],(nBins,nTIs))
         dataOneVoxel=dataOneVoxel[:,0:nTIsToFit]
@@ -145,6 +149,8 @@ def fitB(dataMat,tiVec,saveDir,nTIsToFit,M0=1,alpha=1,saveFn='fitB',verbosity=1,
 
         if np.sum(np.reshape(dataOneVoxel,(nBins*nTIsToFit,)))==0:
             doFit=0
+            if verbosity>4:
+                print('fitB: sum dataOneVoxel=0')
 
         #if doFit and checkData(dataOneVoxel,thrNegFrac)==0:
         #    if verbosity>1:
@@ -153,7 +159,10 @@ def fitB(dataMat,tiVec,saveDir,nTIsToFit,M0=1,alpha=1,saveFn='fitB',verbosity=1,
         #if doFit and np.sum(dataOneVoxel)<0:
         #    doFit=0
         if doFit:
-            p0,pUB,pLB,pScale=setInitialGuessB(dataOneVoxel,tiVec,M0=M0,alpha=alpha,verbosity=0)
+            print('fitB: calling setInitialGuessB')
+            p0,pUB,pLB,pScale=setInitialGuessB(dataOneVoxel,tiVec,M0=M0,alpha=alpha,verbosity=5)
+            print('fitB: returned from setInitialGuessB')
+
             if verbosity>3:
                 print('p0:', p0)
         if doFit and checkBounds(p0,pUB,pLB)==0:
@@ -188,6 +197,7 @@ def fitB(dataMat,tiVec,saveDir,nTIsToFit,M0=1,alpha=1,saveFn='fitB',verbosity=1,
             np.save(saveFnPartial,fitVec)
             printf('\n')
         printf('.')
+        #printf('dofit is %d',doFit);
     eTime=time.time()-tStart;print('total time:',eTime)
     np.save(saveFnComplete,fitVec)
     return fitVec,mseMat
@@ -233,7 +243,7 @@ def getFitMask(dataVol,tiVec,M0=1,alpha=1,minMean=-1,verbosity=1):
                 
         fitMask[iVox]=statFlg
     fitMask=np.reshape( fitMask,(nX,nY,nSlices))
-                
+
     return fitMask
 
 
@@ -274,66 +284,35 @@ def makeFitMaskFile(subDir,id_dir,brainMaskFn,tiVec,nBins=8,nTIs=5,nSlices=14,nX
     
     return fitMask
 
-#def fitWithinMask(id_dir,subDir,mask,saveDir,M0=1,alpha=1,verbosity=0,dryRun=0):
-#    # volSz [5,] = (nX,nY,nSlices,nReps,nTIs)
-#    volSz=(64,64,14,78,7)
-#
-#    #(nX,nY,nSlices,nReps,nTIs)=volSz
-#    tiVecOne=np.arange(250,750,100)    
-#    picoreMat=np.zeros((nX,nY,nSlices,nReps,nTIs))
-#    picoreMat=VC_loadPicoreData(subDir, id_dir,verbosity=0)
-#    
-#    for iSlice in np.arange(0,3,1):
-##        print('.......fitWithinMask setting up fit data for slice ',iSlice,'..............')
-#        saveFn=saveDir+'fitB_slice'+str(iSlice)
-#        mseSaveFn=saveDir+'mse_slice'+str(iSlice)   
-#        (phiCSVecOneSlice,junk)=loadPhiCSVecOneSlice(subDir,id_dir,iSlice+1,verbosity=1)
-#        if FIGURES_ON:
-#            plt.figure(figsize=[40,5]);plt.plot(phiCSVecOneSlice,label='slice'+str(iSlice));
-##            plt.title('$\phi_c^s$',fontsize=30);plt.legend(fontsize=20);
-#        if FIGURES_ONSCREEN:
-#            plt.ion();plt.show()
-        #if FIGURES_SAVED:
-        #    figFn='phics_s'+str(iSlice)+'.pdf'
-        #    plt.savefig(figFn);
-#        dataMat=loadDataToFit(picoreMat,1,nX,1,nY,iSlice+1,phiCSVecOneSlice,tiVec,nBins=8,nTIs=5)
-#        if FIGURES_ON:
-#            sliceDataMontage(dataMat)
-#       dataMatMasked=dataMat*np.tile(fitMask[:,:,iSlice,np.newaxis,np.newaxis],(1,1,8,5))
-#        if FIGURES_ON:
-#            sliceDataMontage(dataMatMasked)
-#        fitVec,mseMat=fitB(dataMatMasked,tiVec,M0=M0,alpha=alpha,saveFn=saveFn,verbosity=verbosity,dryRun=dryRun)
-#        plot2DFit3Par(fitVec,fitMatType=0)
-#        np.save(saveFn,fitVec)
-#        np.save(mseSaveFn,mseMat)
-
 def fitWithinMaskPar(iSlice,id_dir,subDir,fitMask,saveDir,nX,nY,nSlices,nBins,nReps,nTIs,nTIsToFit,tiVec,M0,alpha,mMethod,dryRun,verbosity):
     """"Load data, take a mask as input and call the fit function in a way that is suitable for MP execution."""
 
+    verbosity=2
+    if verbosity>0:
+        print('fitWithinMaskPar called')
     saveFn=saveDir+'/fitB_slice'+str(iSlice)
     mseSaveFn=saveDir+'/mse_slice'+str(iSlice) 
     
     if verbosity>=1:
-        print('---fitWithinMaskPar called---')
-        print('fitWithinMaskPar has: iSlice '+str(iSlice))
-        print('fitWithinMaskPar has: id_dir '+str(id_dir))
-        print('fitWithinMaskPar has: subDir '+str(subDir))
-        print('fitWithinMaskPar has: nTIs '+str(nTIs))
-        print('fitWithinMaskPar has: nTIsToFit '+str(nTIsToFit))
-        print('fitWithinMaskPar has: fitMask size '+str(np.shape(fitMask)))
-        print('fitWithinMaskPar has: M0 '+str(M0))
-        print('fitWithinMaskPar has: alpha '+str(alpha))
-        print('fitWithinMaskPar has: verbosity '+str(verbosity))
-        print('fitWithinMaskPar has: dryRun '+str(dryRun))
-        print('fitWithinMaskPar has: nBins '+str(nBins))
-        print('fitWithinMaskPar has: mMethod '+str(mMethod))
-        print('fitWithinMaskPar has: saveFn '+str(saveFn))
-        print('fitWithinMaskPar has: tiVec shape '+str(np.shape(tiVec)))
+        print(' ... has: iSlice '+str(iSlice))
+        print(' ... has: id_dir '+str(id_dir))
+        print(' ... has: subDir '+str(subDir))
+        print(' ... has: nTIs '+str(nTIs))
+        print(' ... has: nTIsToFit '+str(nTIsToFit))
+        print(' ... has: fitMask size '+str(np.shape(fitMask)))
+        print(' ... has: M0 '+str(M0))
+        print(' ... has: alpha '+str(alpha))
+        print(' ... has: verbosity '+str(verbosity))
+        print(' ... has: dryRun '+str(dryRun))
+        print(' ... has: nBins '+str(nBins))
+        print(' ... has: mMethod '+str(mMethod))
+        print(' ... has: saveFn '+str(saveFn))
+        print(' ... has: tiVec shape '+str(np.shape(tiVec)))
         
     picoreMat=np.zeros((nX,nY,nSlices,nReps,nTIs))
     picoreMat=VC_loadPicoreData(subDir, id_dir,verbosity=0)
-    print('fitWithinMaskPar has picoreMat size'+str(np.shape(picoreMat))+' sum '+str(np.sum(picoreMat)))
-    print('.......fitWithinMask setting up fit data for slice ',iSlice,'..............')
+    print(' ... has picoreMat size'+str(np.shape(picoreMat))+' sum '+str(np.sum(picoreMat)))
+    print(' ... setting up fit data for slice ',iSlice,'..............')
   
     (phiCSVecOneSlice,junk)=loadPhiCSVecOneSlice(subDir,id_dir,iSlice+1,verbosity=1)
     if 0:
@@ -343,21 +322,22 @@ def fitWithinMaskPar(iSlice,id_dir,subDir,fitMask,saveDir,nX,nY,nSlices,nBins,nR
     if 0:
         sliceDataMontage(dataMat)
     if verbosity>1:
-        print('fitWithinMaskPar: shape fitMask '+str(np.shape(fitMask)))
-        print('fitWithinMaskPar: shape dataMat '+str(np.shape(dataMat)))
-        print('fitWithinMaskPar: before masking')
+        print(' ...: shape fitMask,sum fitMask '+str(np.shape(fitMask))+' '+str(np.sum(fitMask)))
+        print(' ...: shape dataMat '+str(np.shape(dataMat)))
+        print(' ...: before masking')
+    fitMask=np.ones(np.shape(fitMask))
     dataMatMasked=dataMat[:,:,:,0:nTIsToFit:1]*np.tile(fitMask[:,:,iSlice,np.newaxis,np.newaxis],(1,1,nBins,nTIsToFit))
+    #dataMatMasked=np.ones(np.shape(dataMatMasked))
     if FIGURES_ONSCREEN:
         sliceDataMontage(dataMatMasked)
     if verbosity>1:
-        print('saveDir is '+str(saveDir))
-        print('dataMatMasked is shape '+str(np.shape(dataMatMasked))+' sum '+str(np.sum(dataMatMasked)))
-        print(' dataMatMasked is '+str(np.shape(dataMatMasked)))
-        print(' saveDir is: '+saveDir)
+        print(' ... saveDir is '+str(saveDir))
+        print(' ... dataMatMasked is shape '+str(np.shape(dataMatMasked))+' sum '+str(np.sum(dataMatMasked)))
+        print(' ... dataMatMasked is '+str(np.shape(dataMatMasked)))
+        print(' ... saveDir is: '+saveDir)
         print(' tiVec is shape: '+str(np.shape(tiVec))+' has max min '+str(np.max(tiVec))+' '+str(np.min(tiVec)))
-        print(' saveFn: '+saveFn)
-        print(' nTIs: '+str(nTIs))
-        print('------------------------------')
+        print(' ... saveFn: '+saveFn)
+        print(' ... nTIs: '+str(nTIs))
     if 1:
         fitVec,mseMat=fitB(dataMatMasked,tiVec,saveDir,nTIsToFit,M0=M0,alpha=alpha,saveFn=saveFn,verbosity=verbosity,dryRun=dryRun)
         if 0:
