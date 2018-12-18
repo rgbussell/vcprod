@@ -7,15 +7,17 @@ PATH=$PATH:/home/rbussell/anaconda3/bin/
 source /home/rbussell/anaconda3/bin/activate
 
 echo $sm called at `date` >> $logFn
-echo $sm has these input arguments: $1 $2 $3 $4 $5 $6 >> $logFn
+echo $sm has these input arguments: $1 $2 $3 $4 $5 >> $logFn
 procDir=$1
 M0=$2
 pp=$3
-uid=$4
+id_dir=$4
+uid=$5
 
 echo procDir $procDir >> $logFn
 echo M0 $M0 >> $logFn
 echo pp is $pp >> $logFn
+echo id_dir is $id_dir >> $logFn
 echo uid is $uid >> $logFn
 
 #source `which activate`
@@ -24,4 +26,4 @@ which python
 python --version
 
 echo run the processing python code
-~/bin/vc/VC_runProc.py $procDir $M0 $pp $uid
+~/bin/vc/VC_runProc.py $procDir $M0 $pp $id_dir $uid

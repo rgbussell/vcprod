@@ -69,7 +69,7 @@ def setInitialGuessB(dataVec,tiVec,M0=1,alpha=1,verbosity=1):
     if verbosity>1:
         print('setInitialGuessB has M0=',str(M0))
     if verbosity>2:
-        print('setInitialGuess B has dataVec=',str(dataVec))
+        print('setInitialGuess B has dataVec=\n',str(dataVec))
 
     fitfuncB=lambda p,tiVec:p[0]*2*M0*alpha*getBolusModel(transitDelay=p[1],sigma=p[2])[tiVec]
     errfuncB=lambda p,tiVec,dataVec:fitfuncB(p,tiVec)-dataVec
@@ -83,7 +83,6 @@ def setInitialGuessB(dataVec,tiVec,M0=1,alpha=1,verbosity=1):
     p0[1]=td0;                             pLB[1]=tdLB;               pUB[1]=tdUB;       pScale[1]=p0[1]
     p0[2]=sigma0;                          pLB[2]=sigmaLB;            pUB[2]=sigmaUB;    pScale[2]=p0[2]
 
-    print('setInitialGuessB about to return')
 #    fsWide=[40,10]
 #
 #    if FIGURES_ON==1:
@@ -109,18 +108,21 @@ def fitB(dataMat,tiVec,saveDir,nTIsToFit,M0=1,alpha=1,saveFn='fitB',verbosity=5,
     #   mseMat [nVox nBins ] mean squared error of the fit
     #Break the data into individual TIs and fit separately
     #only fit 5 point data    thrNegFrac=0.4 # reject data if this fraction is negative
+    DEBUG_NPOINTS_TO_FIT=0
+    #verbosity=5
     nTIs=7
     #thrNegFrac=0.5
     nFitPars=3
     saveFnPartial=saveFn+'_partial'
     saveFnComplete=saveFn
-   
+
     fitfuncB=lambda p,tiVec:p[0]*2*M0*alpha*getBolusModel(transitDelay=p[1],sigma=p[2])[tiVec]
     errfuncB=lambda p,tiVec,dataVec:fitfuncB(p,tiVec)-dataVec
  
-    if 1:
+    if verbosity>1:
         print('fitB called: dataMat has shape '+str(np.shape(dataMat))+' sum '+str(np.sum(dataMat)))
-        print('... saving output to',saveFnPartial)
+        print('... saving partial output to',saveFnPartial)
+        print('... saving complete output to',saveFnComplete)
         print('... has saveDir='+ saveDir)
         print('... has tiVec shape='+str(np.shape(tiVec)))
         print('... has M0,alpha,nTIsToFit,dryRun', str(M0),str(alpha),str(nTIsToFit),str(dryRun))
@@ -128,40 +130,33 @@ def fitB(dataMat,tiVec,saveDir,nTIsToFit,M0=1,alpha=1,saveFn='fitB',verbosity=5,
         print('... has dryRun='+ str(dryRun))
     
     (nX,nY,nBins,nTIs)=np.shape(dataMat)
-    nVox=nX*nY
-    dataMat=np.reshape(dataMat,(nX*nY,nBins*nTIs))
 
+    nVox=nX*nY
+    if DEBUG_NPOINTS_TO_FIT>0:
+        nVox=min(nVox,DEBUG_NPOINTS_TO_FIT)
+
+    #inits
+    dataMat=np.reshape(dataMat,(nX*nY,nBins*nTIs))
     mseMat=np.zeros((nVox,nBins))
-    
     fitVec=np.zeros((nVox,nBins,nFitPars))
 
     tStart=time.time()
 
+    #loop over voxels, fitting each one
     for iVox in np.arange(0,nVox,1):
         doFit=1
         if dryRun:
             doFit=0
-        #printf('dofit is %d',doFit);
             
         dataOneVoxel=np.reshape(dataMat[iVox,:],(nBins,nTIs))
         dataOneVoxel=dataOneVoxel[:,0:nTIsToFit]
         
-
         if np.sum(np.reshape(dataOneVoxel,(nBins*nTIsToFit,)))==0:
             doFit=0
             if verbosity>4:
                 print('fitB: sum dataOneVoxel=0')
-
-        #if doFit and checkData(dataOneVoxel,thrNegFrac)==0:
-        #    if verbosity>1:
-        #        printf('BAD DATA, mean=%f, stdev=%f',np.mean(dataOneVoxel),np.std(dataOneVoxel))
-        #    doFit=0;
-        #if doFit and np.sum(dataOneVoxel)<0:
-        #    doFit=0
         if doFit:
-            print('fitB: calling setInitialGuessB')
             p0,pUB,pLB,pScale=setInitialGuessB(dataOneVoxel,tiVec,M0=M0,alpha=alpha,verbosity=5)
-            print('fitB: returned from setInitialGuessB')
 
             if verbosity>3:
                 print('p0:', p0)
@@ -175,31 +170,32 @@ def fitB(dataMat,tiVec,saveDir,nTIsToFit,M0=1,alpha=1,saveFn='fitB',verbosity=5,
             for iBin in np.arange(0,nBins,1):   #Loop through each bin
                 dataOneBin=dataOneVoxel[iBin,0:nTIsToFit]
                 tiVecToFit=tiVec[0:nTIsToFit]
-                #temp=optimize.least_squares(errfuncB,p0,x_scale=pScale,args=(tiVec,np.reshape(dataMat[iVox,:],(nBins,nTIs))[iBin,:]),bounds=(pLB,pUB),verbose=0)
-                #print("shape dataOneBin"+str(np.shape(dataOneBin)))
-                #print('shape tiVec'+str(np.shape(tiVec)))
                 tiVecToFit=tiVecToFit[~np.isnan(dataOneBin)]
                 dataToFit=dataOneBin[~np.isnan(dataOneBin)]
                 temp=optimize.least_squares(errfuncB,p0,x_scale=pScale,args=(tiVecToFit,dataToFit),bounds=(pLB,pUB),verbose=0)
                 fitVec[iVox,iBin,:]=temp.x
                 
                 if verbosity>2:
-                    print ('p0:', str(p0))
-                    print('temp.x', str(temp.x))
+                    print ('fitB: p0:', str(p0))
+                    print('fitB: temp.x', str(temp.x))
+                    print('fitB: shape fitVec ', str(np.shape(fitVec)), 'sum fitVec ', str(np.sum(fitVec)))
         
                 if verbosity>2:
                     #print('mse td0/tdF disp0/dispF abv0/abvF',p0[1],fitVec[iVox,iBin,1],p0[2],fitVec[iVox,iBin,2],p0[0],fitVec[iVox,iBin,0])                            
-                    printf('mse%d=%0.2f  ',iBin,mseMat[iVox,iBin])                            
+                    printf('fitB: mse%d=%0.2f  ',iBin,mseMat[iVox,iBin])                            
         eTime=time.time()-tStart;
         if np.mod(iVox,nX*10)==0:
-            if verbosity>=0:
-                print('Vox='+str(iVox)+' saving to '+saveFnPartial)
             np.save(saveFnPartial,fitVec)
+            if verbosity>=0:
+                print('fitB: Vox='+str(iVox)+' saving to '+saveFnPartial)
             printf('\n')
         printf('.')
         #printf('dofit is %d',doFit);
-    eTime=time.time()-tStart;print('total time:',eTime)
+    eTime=time.time()-tStart;print('fitB: total time:',eTime)
     np.save(saveFnComplete,fitVec)
+    if verbosity>0:
+        print('fitB: fitVec has size ', str(np.shape(fitVec)), ' and sum ',str(np.sum(fitVec)) )
+        print('fitB: saving fitVec to file ', saveFnComplete)
     return fitVec,mseMat
 
 #----------
@@ -247,7 +243,9 @@ def getFitMask(dataVol,tiVec,M0=1,alpha=1,minMean=-1,verbosity=1):
     return fitMask
 
 
-def makeFitMaskFile(subDir,id_dir,brainMaskFn,tiVec,nBins=8,nTIs=5,nSlices=14,nX=64,nY=64,nReps=39,minMean=-1,saveNii=1):
+def makeFitMaskFile(subDir,id_dir,brainMaskFn,nBins=8,nTIs=5,nSlices=14,nX=64,nY=64,nReps=39,minMean=-1,saveNii=1):
+    """makeFitMaskFile: internal function for combining a threshold mask with brain mask in compliance pipeline.
+       If you set minMean=-1 (the default) no mean threshold will be applied and you get your input mask back."""
     # use the brain mask and also screen each voxel to make a fit mask
     # ave the fit mask to a file and also return it.
     
@@ -258,23 +256,33 @@ def makeFitMaskFile(subDir,id_dir,brainMaskFn,tiVec,nBins=8,nTIs=5,nSlices=14,nX
     tiVec=np.reshape(np.tile(tiArr,(np.int(np.floor(nReps/2)),1)),(273,))
     tiVec5pt=tiVec[tiVec<tiArr[nTIs]]
 
-    #load in the binned data -- the full volume
-    for iSlice in np.arange(0,nSlices,1):
-        printf('.')
-        picoreMat=np.zeros((nX,nY,nSlices,nReps,nTIs))
-        picoreMat=VC_loadPicoreData(subDir, id_dir,verbosity=0)
-        (phiCSVecOneSlice,junk)=loadPhiCSVecOneSlice(subDir,id_dir,iSlice+1,nSlices=nSlices,verbosity=0)
-        dataVol5pt[:,:,iSlice,:,:]=loadDataToFit(picoreMat,1,nX,1,nY,iSlice+1,phiCSVecOneSlice,tiVec,nBins=8,nTIs=5)
-
+    #load in the precalculated brain mask
     img=nib.load(brainMaskFn)
     brainMask=np.squeeze(img.get_data());
-    np.shape(fitMask)
-    fitMask=getFitMask(dataVol5pt,tiVec,M0=1,alpha=1,minMean=minMean,verbosity=1)
-    mask=fitMask*brainMask
-    print('fittable voxels: ',(mask==1).sum(),'out of ', np.prod(np.shape(mask)),' total')
-    sliceDataMontage(mask[:,:,:,np.newaxis]);
-    sliceDataMontage(brainMask[:,:,:,np.newaxis]);
 
+    #do mean thresholding if that is requested
+    if minMean==-1:     #in this case the fitMask is just ones
+        print('makeFitMaskFile: no thresholding will be applied to input brain mask')
+        fitMask=np.ones(np.shape(brainMask))
+    else:               # in this case threshold by the mean
+        print('makeFitMaskFile: thresholding on mean signal at ', str(minMean));
+        for iSlice in np.arange(0,nSlices,1):
+            printf('.')
+            picoreMat=np.zeros((nX,nY,nSlices,nReps,nTIs))
+            picoreMat=VC_loadPicoreData(subDir, id_dir,verbosity=0)
+            (phiCSVecOneSlice,junk)=loadPhiCSVecOneSlice(subDir,id_dir,iSlice+1,nSlices=nSlices,verbosity=0)
+            dataVol5pt[:,:,iSlice,:,:]=loadDataToFit(picoreMat,1,nX,1,nY,iSlice+1,phiCSVecOneSlice,tiVec,nBins=8,nTIs=5)
+        fitMask=getFitMask(dataVol5pt,tiVec,M0=1,alpha=1,minMean=minMean,verbosity=1)
+
+    #apply the mask
+    mask=fitMask*brainMask
+
+    print('makeFitMaskFile: fittable voxels: ',(mask==1).sum(),'out of ', np.prod(np.shape(mask)),' total')
+    if FIGURES_ONSCREEN:
+        sliceDataMontage(mask[:,:,:,np.newaxis]);
+        sliceDataMontage(brainMask[:,:,:,np.newaxis]);
+
+    #save the mask
     saveFn=subDir+'/fitMask'
     np.save(saveFn,mask)
     print('makeFitMaskFile: mask saved to ',saveFn)

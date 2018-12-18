@@ -1,4 +1,5 @@
 FIGURES_ONSCREEN=0
+PLOT_BLOCKING=0
 
 #Data plotting functions
 import matplotlib.pyplot as plt
@@ -23,6 +24,10 @@ def plotOnePlane(plane,minVal=0,maxVal=0,cmap=''):
         plt.pcolormesh(x,y,plane,cmap=cmap)
 
     plt.colorbar()
+    if PLOT_BLOCKING==1:
+        plt.show(block=True)
+    else:
+        plt.show()
 
 #-------------
 ## abv calculation helper functions
@@ -349,3 +354,106 @@ def sliceDataMontage(dataMat,fs=(40,10)):
         plt.xticks([]);plt.yticks([]);plt.title('single slice data')
         plt.colorbar();
         plt.ion();plt.show()
+
+
+def plot2DFit3Par(fitMat,ABV_IDX=0,TD_IDX=1,SIGMA_IDX=2):
+    #input:
+    #  fitMat [nX nY 3]
+    #output:
+    #  plots of the ABV, TD and SIGMA
+    
+    #comp=(np.max(fitMat[:,:,ABV_IDX])-np.min(fitMat[:,:,ABV_IDX]))/np.max(fitMat[:,:,ABV_IDX])
+    
+    h=plt.figure(figsize=[10,10])
+    h.subplots_adjust(hspace=0.2,wspace=0.2)
+    plt.subplot(332)
+    plt.imshow(np.squeeze(fitMat[:,:,TD_IDX]),interpolation='none',cmap='viridis')
+    plt.title('td')
+    plt.colorbar()
+    plt.subplot(333)
+    plt.imshow(np.squeeze(fitMat[:,:,SIGMA_IDX]),interpolation='none',cmap='viridis')
+    plt.title('$\sigma$')
+    plt.colorbar()
+    plt.subplot(331)
+    plt.imshow(np.squeeze(fitMat[:,:,ABV_IDX]),interpolation='none',cmap='viridis')
+    plt.title('ABV')
+    plt.colorbar()
+    #print(np.shape(comp))
+    #plt.imshow(comp,interpolation='none',cmap='viridis')
+    #plt.title('comp frac')
+    #plt.colorbar()
+    return 1
+
+
+def plot2DFitMatBin(fitMatIn,nX=45,nY=45,nBins=8,fitMatType=0):
+    #input:
+    #  fitMat [nX nY nBins nPars]
+    #output:
+    #  plots of the ABV, TD and SIGMA
+    nPlotPars=3
+    
+    if fitMatType==0:
+        ABV_IDX=13;
+        TD_IDX=11
+        SIGMA_IDX=12
+    
+        fitMat=np.zeros((nX,nY,nBins,nPlotPars))
+        fitMat[:,:,:,0]=np.reshape(fitMatIn,(nX,nY,nBins,nRawPars))[:,:,:,ABV_IDX]
+        fitMat[:,:,:,1]=np.reshape(fitMatIn,(nX,nY,nBins,nRawPars))[:,:,:,TD_IDX]
+        fitMat[:,:,:,2]=np.reshape(fitMatIn,(nX,nY,nBins,nRawPars))[:,:,:,SIGMA_IDX]
+
+    if fitMatType==1: #only 3 fit pars
+        fitMat=np.reshape(fitMatIn,(nX,nY,nBins,nPlotPars))
+        
+    for iBin in np.arange(0,nBins,1):
+        plot2DFit3Par(fitMat[:,:,iBin,:],ABV_IDX=0,TD_IDX=1,SIGMA_IDX=2)
+
+    return 1
+
+def mapsFromFits(fitFn,imageShape,M0,pp,cbfMap,alpha=1,tdUB=500,fitType=0,method=0):
+    #input:
+    #   fitFn string, name of the file with fit parameters
+    #   3 parameters expected from fitFn
+    
+    (nX,nY,nBins,nPars)=imageShape
+    fitVec=np.load(fitFn)
+    print('loaded fitVec, size ',np.shape(fitVec))
+    
+    if fitType==0:
+        ABV_IDX=0;TD_IDX=1;SIGMA_IDX=2;
+    else: 
+        print('ERROR: fitType=',str(fitType),'not supported.')
+    
+    if tdUB>0:    #mask based on upper limit on transit delay
+        print('masking td below ',str(tdUB),' ms')
+        fitVec=maskAllBins(fitVec,TD_IDX,uThr=tdUB,lThr=0)
+
+    if method==0:
+        compMaxVal=1
+    if method==1:
+        compMaxVal=0.25
+    fitMat=np.reshape(fitVec,(nX,nY,nBins,nPars))
+    abvMat=calcAbvMatB(fitMat,alpha=alpha,M0=M0)
+    tdMat=getTdMatB(fitMat)
+    print(np.shape(tdMat))
+    compMat,abvMaxMat,abvMinMat,abvMaxIdxMat,abvMinIdxMat=calcComp(abvMat,pp=pp,tdMat=tdMat,method=method)
+    plotCompPanel(compMat,abvMaxMat,abvMinMat,abvMaxIdxMat,abvMinIdxMat,nPhases=nBins,abvMaxVal=1,compMinVal=0, compMaxVal=compMaxVal,cbfMap=cbfMap)
+    plot2DFitMatBin(fitVec,nX,nY,nBins,fitMatType=1)
+
+def make3x2(vol):
+    tmp=np.transpose(vol,(1,0,2))
+    tmp=np.reshape(tmp,(64,64,3,2))
+    tmp=np.transpose(tmp,(2,0,3,1))
+    tmp=np.reshape(tmp,(64*3,64,2))
+    tmp=np.reshape(tmp,(64*3,64*2))
+    return tmp
+
+def make3x4(vol):
+    nCol=3; nRow=4
+    print('make3x4 has vol of shape',np.shape(vol))
+    tmp=np.transpose(vol,(1,0,2))
+    tmp=np.reshape(tmp,(64,64,nRow,nCol))
+    tmp=np.transpose(tmp,(2,0,3,1))
+    tmp=np.reshape(tmp,(64*nRow,64,nCol))
+    tmp=np.reshape(tmp,(64*nRow,64*nCol))
+    return tmp
