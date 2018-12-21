@@ -32,7 +32,6 @@ def plotOnePlane(plane,minVal=0,maxVal=0,cmap=''):
 #-------------
 ## abv calculation helper functions
 #-------------
-import pylab
 def plotCompPanel(compMat,abvMaxMat,abvMinMat,abvMaxIdxMat,abvMinIdxMat,cbfMap,nPhases=100,abvMinVal=0.0,abvMaxVal=2,compMaxVal=1,compMinVal=0):
     cmapComp='viridis'
     cmapDisc = pylab.cm.get_cmap('PiYG', nPhases)
@@ -167,52 +166,6 @@ def getTdMatB(fitMat):
     tdMat=np.reshape(tdVec,(nX,nY,nBins))
     return tdMat
 
-def calcComp(abvMat,pp=1,tdMat='',method=0):
-    #input:
-    #  abvMat [nX nY nBins]
-    nX=np.shape(abvMat)[0]
-    nY=np.shape(abvMat)[1]
-    compMat=np.zeros((nX,nY))
-    abvMaxMat=np.zeros((nX,nY))
-    abvMinMat=np.zeros((nX,nY))
-    abvMaxIdxMat=np.zeros((nX,nY))
-    abvMaxIdxMat=np.zeros((nX,nY))
-
-    if method==0:   #ID phases based on abv max and min
-        abvMaxMat=100*np.max(abvMat,2)
-        abvMinMat=100*np.min(abvMat,2)
-        abvMaxIdxMat=np.argmax(abvMat,2)
-        abvMinIdxMat=np.argmin(abvMat,2)
-
-    if method==1:   #ID phases based on the td max and min
-        if tdMat=='':
-            print('ERROR: calcComp needs a tdMat for this method='+str(method))
-            return 0
-        abvMaxIdxMat=np.argmax(tdMat,2)
-        abvMinIdxMat=np.argmin(tdMat,2)
-        abvMaxMat=np.zeros((nX,nY))
-        abvMinMat=np.zeros((nX,nY))
-        for i in np.arange(0,nX,1):
-            for j in np.arange(0,nY,1):
-                abvMaxMat[i,j]=100*abvMat[i,j,abvMaxIdxMat[i,j]]
-                abvMinMat[i,j]=100*abvMat[i,j,abvMinIdxMat[i,j]]
-
-    #divTemp=abvMinMat
-    #divTemp2=abvMaxMat+abvMinMat
-    
-    #print(np.shape(divTemp))
-    #Handle div by zero by looking at every value before the divide
-    # set the div by zero compliance values to -1.0
-    for i in np.arange(0,nX,1):
-        for j in np.arange(0,nY,1):
-            if abvMinMat[i,j]==0:
-                compMat[i,j]=-1;
-            else:
-                compMat[i,j]=100*(abvMaxMat[i,j]-abvMinMat[i,j])/abvMinMat[i,j]/pp
-
-    return compMat,abvMaxMat,abvMinMat,abvMaxIdxMat,abvMinIdxMat
-
-
 #------
 #plot fit mat
 #-----
@@ -343,15 +296,18 @@ def plot2DFit3Par(fitMat,fitMatType=0):
     plt.colorbar()
     return 1
 
-def sliceDataMontage(dataMat,fs=(40,10)):
+def sliceDataMontage(dataMat,fs=(40,10),xLab='',yLab='',title='',txtsz=15,dispFlag=0,cmap=''):
     (nX,nY,nBins,nTIs)=np.shape(dataMat)
     dataMat=np.reshape(np.transpose(dataMat,(0,2,1,3)),(nX,nY*nBins,nTIs))
     dataMat=np.reshape( np.transpose(dataMat,(2,0,1) ),(nX*nTIs,nY*nBins))
-    if FIGURES_ONSCREEN:
+    if FIGURES_ONSCREEN or dispFlag==1:
         plt.figure(figsize=fs)
-        plt.imshow(dataMat)
-        plt.xlabel('bins',fontsize=15);plt.ylabel('TIs',fontsize=15)
-        plt.xticks([]);plt.yticks([]);plt.title('single slice data')
+        if cmap=='':
+            plt.imshow(dataMat)
+        else:
+            plt.imshow(dataMat,cmap=cmap)
+        plt.xlabel(xLab,fontsize=txtsz);plt.ylabel(yLab,fontsize=txtsz)
+        plt.xticks([]);plt.yticks([]);plt.title(title,fontsize=txtsz)
         plt.colorbar();
         plt.ion();plt.show()
 

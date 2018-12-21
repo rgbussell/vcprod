@@ -8,3 +8,4 @@ import vc.view
 import vc.model
 import vc.parallel
 import vc.fileutils
+import vc.calccomp

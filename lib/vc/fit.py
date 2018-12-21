@@ -27,13 +27,6 @@ from .model import getBolusModel
 
 
 #------
-#Fitting models
-#------
-
-#fitfuncB=lambda p,tiVec:p[0]*2*M0*alpha*getBolusModel(transitDelay=p[1],sigma=p[2])[tiVec]
-#errfuncB=lambda p,tiVec,dataVec:fitfuncB(p,tiVec)-dataVec
-
-#------
 #Fitting functions
 #
 
@@ -41,7 +34,7 @@ def checkBounds(p,pUB,pLB):
     verbosity=1
     if verbosity>0:
         print('checkBounds: called')
-    if np.sum(np.abs(np.where(pUB<pLB)))>0:
+    if np.sum( np.abs( np.where(pUB<=pLB) ) )>0:
         return 0
         print('checkBounds: bad bounds')
     else:
@@ -49,7 +42,6 @@ def checkBounds(p,pUB,pLB):
     
 def checkData(dataVec,thrNegFrac=0.2):
     retVal=1
-    #print('check Data has dataVec shape ', np.shape(dataVec))
     #if np.mean(dataVec)<0:
     #    retVal=0
     if np.sum( dataVec<=0 )>thrNegFrac*np.shape( dataVec )[0]:
@@ -161,9 +153,9 @@ def fitB(dataMat,tiVec,saveDir,nTIsToFit,M0=1,alpha=1,saveFn='fitB',verbosity=5,
             if verbosity>3:
                 print('p0:', p0)
         if doFit and checkBounds(p0,pUB,pLB)==0:
+            doFit=0
             if verbosity>2:
                 printf('BAD BOUNDS. SKIP.\n')
-            doFit=0
         if doFit==1:
             if verbosity>2:
                 printf('fitting voxel %d of %d\n',iVox,nVox)
@@ -190,7 +182,6 @@ def fitB(dataMat,tiVec,saveDir,nTIsToFit,M0=1,alpha=1,saveFn='fitB',verbosity=5,
                 print('fitB: Vox='+str(iVox)+' saving to '+saveFnPartial)
             printf('\n')
         printf('.')
-        #printf('dofit is %d',doFit);
     eTime=time.time()-tStart;print('fitB: total time:',eTime)
     np.save(saveFnComplete,fitVec)
     if verbosity>0:

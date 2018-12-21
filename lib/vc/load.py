@@ -24,9 +24,10 @@ regDir='reg'
 def VC_loadPicoreData(subDir,id_dir,verbosity=1):
     #load all the motion corrected picore data
     #remove the first two reps
-    print('VC_loadPicoreData called')
-    print('. subDir is ',subDir)
-    print('. id_dir is ',id_dir)
+    if verbosity>0:
+        print('VC_loadPicoreData called')
+        print('. subDir is ',subDir)
+        print('. id_dir is ',id_dir)
     if 0:
         import os
         print(os.getcwd())
@@ -44,8 +45,6 @@ def VC_loadPicoreData(subDir,id_dir,verbosity=1):
             print(fn + ' loaded, shape: ' +str(np.shape(picoreMat)))
         labelStr='TI='+str(ti);
         cnt=cnt+1
-    #plt.title('same voxel, registered picore data, diff TIs')
-    #plt.legend(loc='best',fancybox=True,framealpha=0.5)
     return aslMat
 
 def VC_loadPhiCS(subDir,id_dir,verbosity=1):
