@@ -33,6 +33,8 @@ from .model import getBolusModel
 def checkBounds(p,pUB,pLB):
     verbosity=1
     if verbosity>0:
+        print('pUB',pUB)
+        print('pLB',pLB)
         print('checkBounds: called')
     if np.sum( np.abs( np.where(pUB<=pLB) ) )>0:
         return 0
@@ -69,22 +71,12 @@ def setInitialGuessB(dataVec,tiVec,M0=1,alpha=1,verbosity=1):
     
     tdLB=50;tdUB=800;td0=0.2*(tdLB+tdUB);
     sigmaLB=10;sigmaUB=200;sigma0=0.5*(sigmaLB+sigmaUB);
-    sigMean=np.abs(np.mean(dataVec)/M0/alpha/2)
-    sigMax=np.max(dataVec)/M0/alpha/2
+    sigMean=np.abs(np.mean(dataVec[~np.isnan(dataVec)])/M0/alpha/2)
+    sigMax=np.max(dataVec[~np.isnan(dataVec)])/M0/alpha/2
     p0[0]=sigMax;                          pLB[0]=0.01*sigMax;        pUB[0]=2*sigMax;   pScale[0]=p0[0]
     p0[1]=td0;                             pLB[1]=tdLB;               pUB[1]=tdUB;       pScale[1]=p0[1]
     p0[2]=sigma0;                          pLB[2]=sigmaLB;            pUB[2]=sigmaUB;    pScale[2]=p0[2]
 
-#    fsWide=[40,10]
-#
-#    if FIGURES_ON==1:
-#        if verbosity>0:
-#            plt.figure(figsize=fsWide)
-#            plt.plot(dataVec,label='data')
-#            plt.plot(fitfuncB(p0,tiVec),label='B initial guess');
-#            plt.title('model B\nabv='+str(p0[0])+'td='+str(p0[1])+' $\sigma=$'+str(p0[2]),fontsize=25)
-#            plt.legend(fontsize=25)
-        
     return p0,pUB,pLB,pScale
 
 #--------
@@ -105,8 +97,8 @@ def fitB(dataMat,tiVec,saveDir,nTIsToFit,M0=1,alpha=1,saveFn='fitB',verbosity=5,
     nTIs=7
     #thrNegFrac=0.5
     nFitPars=3
-    saveFnPartial=saveFn+'_partial'
-    saveFnComplete=saveFn
+    saveFnPartial=saveFn+'_partial';mseFnPartial=saveFnPartial+'_mse'
+    saveFnComplete=saveFn;mseFnComplete=saveFnComplete+'_mse'
 
     fitfuncB=lambda p,tiVec:p[0]*2*M0*alpha*getBolusModel(transitDelay=p[1],sigma=p[2])[tiVec]
     errfuncB=lambda p,tiVec,dataVec:fitfuncB(p,tiVec)-dataVec
@@ -115,6 +107,8 @@ def fitB(dataMat,tiVec,saveDir,nTIsToFit,M0=1,alpha=1,saveFn='fitB',verbosity=5,
         print('fitB called: dataMat has shape '+str(np.shape(dataMat))+' sum '+str(np.sum(dataMat)))
         print('... saving partial output to',saveFnPartial)
         print('... saving complete output to',saveFnComplete)
+        print('... saving partial mse output to',mseFnPartial)
+        print('... saving complete mse output to',mseFnComplete)
         print('... has saveDir='+ saveDir)
         print('... has tiVec shape='+str(np.shape(tiVec)))
         print('... has M0,alpha,nTIsToFit,dryRun', str(M0),str(alpha),str(nTIsToFit),str(dryRun))
@@ -164,26 +158,32 @@ def fitB(dataMat,tiVec,saveDir,nTIsToFit,M0=1,alpha=1,saveFn='fitB',verbosity=5,
                 tiVecToFit=tiVec[0:nTIsToFit]
                 tiVecToFit=tiVecToFit[~np.isnan(dataOneBin)]
                 dataToFit=dataOneBin[~np.isnan(dataOneBin)]
-                temp=optimize.least_squares(errfuncB,p0,x_scale=pScale,args=(tiVecToFit,dataToFit),bounds=(pLB,pUB),verbose=0)
-                fitVec[iVox,iBin,:]=temp.x
-                
+                try:
+                    temp=optimize.least_squares(errfuncB,p0,x_scale=pScale,args=(tiVecToFit,dataToFit),bounds=(pLB,pUB),verbose=0)
+                    fitVec[iVox,iBin,:]=temp.x
+                    mseMat[iVox,iBin]=temp.cost
+                except:
+                    print('optimize.least_squares threw an exception') 
                 if verbosity>2:
                     print ('fitB: p0:', str(p0))
                     print('fitB: temp.x', str(temp.x))
+                    print('fitB: temp.cost', str(temp.cost))
                     print('fitB: shape fitVec ', str(np.shape(fitVec)), 'sum fitVec ', str(np.sum(fitVec)))
+                    print('fitB: shape mseMat ', str(np.shape(mseMat)), 'sum mseMat ', str(np.sum(mseMat)))
         
                 if verbosity>2:
-                    #print('mse td0/tdF disp0/dispF abv0/abvF',p0[1],fitVec[iVox,iBin,1],p0[2],fitVec[iVox,iBin,2],p0[0],fitVec[iVox,iBin,0])                            
                     printf('fitB: mse%d=%0.2f  ',iBin,mseMat[iVox,iBin])                            
         eTime=time.time()-tStart;
         if np.mod(iVox,nX*10)==0:
             np.save(saveFnPartial,fitVec)
+            np.save(mseFnPartial,mseMat)
             if verbosity>=0:
                 print('fitB: Vox='+str(iVox)+' saving to '+saveFnPartial)
             printf('\n')
         printf('.')
     eTime=time.time()-tStart;print('fitB: total time:',eTime)
     np.save(saveFnComplete,fitVec)
+    np.save(mseFnComplete,mseMat)
     if verbosity>0:
         print('fitB: fitVec has size ', str(np.shape(fitVec)), ' and sum ',str(np.sum(fitVec)) )
         print('fitB: saving fitVec to file ', saveFnComplete)
@@ -322,10 +322,25 @@ def fitWithinMaskPar(iSlice,id_dir,subDir,fitMask,saveDir,nX,nY,nSlices,nBins,nR
         sliceDataMontage(dataMat)
     if verbosity>1:
         print(' ...: shape fitMask,sum fitMask '+str(np.shape(fitMask))+' '+str(np.sum(fitMask)))
-        print(' ...: shape dataMat '+str(np.shape(dataMat)))
+        print(' ...: shape dataMat,sum '+str(np.shape(dataMat)),',',str(np.sum(dataMat)))
         print(' ...: before masking')
-    fitMask=np.ones(np.shape(fitMask))
-    dataMatMasked=dataMat[:,:,:,0:nTIsToFit:1]*np.tile(fitMask[:,:,iSlice,np.newaxis,np.newaxis],(1,1,nBins,nTIsToFit))
+    #fitMask=np.ones(np.shape(fitMask))
+    tmpData=np.reshape(dataMat[:,:,:,0:nTIsToFit:1],(nX,nY,nBins,nTIsToFit))
+    tmpMask=np.reshape( np.tile( fitMask[:,:,np.newaxis,np.newaxis], (1,1,nBins,nTIsToFit) ), (nX,nY,nBins,nTIsToFit) )
+    dataMatMasked=np.zeros(np.shape(dataMat))
+    #This seems pretty inefficient, but I am getting an error from python fromnumeric.py if I use np.multiply
+    #dataMatMasked=np.multiply(tmpData,tmpMask)
+    for iX in np.arange(0,nX,1):
+        for iY in np.arange(0,nY,1):
+            for iBin in np.arange(0,nBins,1):
+                for iTI in np.arange(0,nTIsToFit,1):
+                    dataMatMasked[iX,iY,iBin,iTI]=dataMat[iX,iY,iBin,iTI]*fitMask[iX,iY]
+    if verbosity>1:
+        print(' ...: after masking')
+        print(' ...: shape dataMat,sum '+str(np.shape(dataMat)),',',str(np.sum(dataMat)))
+
+    #dataMatMasked=np.dot(dataMat[:,:,:,0:nTIsToFit:1],np.tile(fitMask[:,:,np.newaxis,np.newaxis],(1,1,nBins,nTIsToFit)))
+    #datamatmasked=datamat[:,:,:,0:ntistofit:1]*np.tile(fitmask[:,:,islice,np.newaxis,np.newaxis],(1,1,nbins,ntistofit))
     #dataMatMasked=np.ones(np.shape(dataMatMasked))
     if FIGURES_ONSCREEN:
         sliceDataMontage(dataMatMasked)
