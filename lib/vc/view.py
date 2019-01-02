@@ -33,6 +33,7 @@ def plotOnePlane(plane,minVal=0,maxVal=0,cmap=''):
 ## abv calculation helper functions
 #-------------
 def plotCompPanel(compMat,abvMaxMat,abvMinMat,abvMaxIdxMat,abvMinIdxMat,cbfMap,nPhases=100,abvMinVal=0.0,abvMaxVal=2,compMaxVal=1,compMinVal=0):
+    import pylab
     cmapComp='viridis'
     cmapDisc = pylab.cm.get_cmap('PiYG', nPhases)
     cbfMinVal=0.2;cbfMaxVal=1.0

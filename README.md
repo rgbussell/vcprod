@@ -1,8 +1,8 @@
 # README #
 
 ### What is this code? ###
-* This is the server side code for UCSD PICORE based vascular compliance analysis
-* It is a WIP!
+* This is the server side code for PICORE based vascular compliance fitting and visualization 
+* This is v1.1 
 
 ### What is this repository for? ###
 
