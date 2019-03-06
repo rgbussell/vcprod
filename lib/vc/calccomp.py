@@ -1,6 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+PLOTTING=0
+
 #Tools for finding cardiac phase
 def getExtremePhiMap(abvMat,tiVec,phiCSVec,method=0,verbosity=1):
     #create a map from the extreme values of the phase across bins
@@ -19,9 +21,10 @@ def getExtremePhiMap(abvMat,tiVec,phiCSVec,method=0,verbosity=1):
         phiMap=getExtremePhiMap(abvMat,tiVec,phiCSVec,method=1,verbosity=0)-getExtremePhiMap(abvMat,tiVec,phiCSVec,method=0,verbosity=0)
         ttlStr='$argmax( f(\phi_c^s) ) - argmin( f(\phi_c^s) )$'
 
-    if verbosity>0:
+    if verbosity>0 and PLOTTING:
         print('np.shape(phiMap)'+str(np.shape(phiMap)))
-        plt.imshow(phiMap,cmap='viridis');plt.title(ttlStr,fontsize=20);plt.colorbar();plt.show()
+        if PLOTTING:
+          plt.imshow(phiMap,cmap='viridis');plt.title(ttlStr,fontsize=20);plt.colorbar();plt.show()
         
     return phiMap
 
@@ -177,9 +180,9 @@ def calcComp(abvMat,tiVec,phiCSVec,pp=1,tdMat='',method=0):
 
     for i in np.arange(0,nX,1):
         for j in np.arange(0,nY,1):
-            if abvMinMat[i,j]==0:
+            deltaAbv=abvMaxMat[i,j]-abvMinMat[i,j]
+            if abvMinMat[i,j]==0 or deltaAbv<0.0:
                 compMat[i,j]=-1;
             else:
                 compMat[i,j]=100*(abvMaxMat[i,j]-abvMinMat[i,j])/abvMinMat[i,j]/pp
-
     return compMat,abvMaxMat,abvMinMat,abvMaxIdxMat,abvMinIdxMat

@@ -30,9 +30,8 @@ from .model import getBolusModel
 #Fitting functions
 #
 
-def checkBounds(p,pUB,pLB):
-    verbosity=1
-    if verbosity>0:
+def checkBounds(p,pUB,pLB,verb=1):
+    if verb>0:
         print('pUB',pUB)
         print('pLB',pLB)
         print('checkBounds: called')
@@ -41,7 +40,9 @@ def checkBounds(p,pUB,pLB):
         print('checkBounds: bad bounds')
     else:
         return 1
-    
+    if verb>0:
+        print('checkBounds exiting')
+
 def checkData(dataVec,thrNegFrac=0.2):
     retVal=1
     #if np.mean(dataVec)<0:
@@ -62,7 +63,7 @@ def setInitialGuessB(dataVec,tiVec,M0=1,alpha=1,verbosity=1):
     pScale=np.zeros((nFitPars,))
     if verbosity>1:
         print('setInitialGuessB has M0=',str(M0))
-    if verbosity>2:
+    if verbosity>1:
         print('setInitialGuess B has dataVec=\n',str(dataVec))
 
     fitfuncB=lambda p,tiVec:p[0]*2*M0*alpha*getBolusModel(transitDelay=p[1],sigma=p[2])[tiVec]
@@ -99,6 +100,9 @@ def fitB(dataMat,tiVec,saveDir,nTIsToFit,M0=1,alpha=1,saveFn='fitB',verbosity=5,
     nFitPars=3
     saveFnPartial=saveFn+'_partial';mseFnPartial=saveFnPartial+'_mse'
     saveFnComplete=saveFn;mseFnComplete=saveFnComplete+'_mse'
+    fitFnComplete=saveFn+"_fit";fitFnPartial=saveFn+'_fit_partial'
+    saveFnDataMat=saveFn+'_dataMat';
+    np.save(saveFnDataMat,dataMat)
 
     fitfuncB=lambda p,tiVec:p[0]*2*M0*alpha*getBolusModel(transitDelay=p[1],sigma=p[2])[tiVec]
     errfuncB=lambda p,tiVec,dataVec:fitfuncB(p,tiVec)-dataVec
@@ -125,6 +129,8 @@ def fitB(dataMat,tiVec,saveDir,nTIsToFit,M0=1,alpha=1,saveFn='fitB',verbosity=5,
     dataMat=np.reshape(dataMat,(nX*nY,nBins*nTIs))
     mseMat=np.zeros((nVox,nBins))
     fitVec=np.zeros((nVox,nBins,nFitPars))
+    #this is the fit vector
+    fit=np.zeros((nVox,nBins,nTIsToFit))
 
     tStart=time.time()
 
@@ -162,8 +168,11 @@ def fitB(dataMat,tiVec,saveDir,nTIsToFit,M0=1,alpha=1,saveFn='fitB',verbosity=5,
                     temp=optimize.least_squares(errfuncB,p0,x_scale=pScale,args=(tiVecToFit,dataToFit),bounds=(pLB,pUB),verbose=0)
                     fitVec[iVox,iBin,:]=temp.x
                     mseMat[iVox,iBin]=temp.cost
+                    #fit[iVox,iBin,:]=fitfuncB(temp.x,tiVec[0:nTIsToFit])
+                    fit[iVox,iBin,:]=np.zeros(nTIsToFit)
                 except:
-                    print('optimize.least_squares threw an exception') 
+                    if verbosity>2:
+                    	print('optimize.least_squares threw an exception') 
                 if verbosity>2:
                     print ('fitB: p0:', str(p0))
                     print('fitB: temp.x', str(temp.x))
@@ -177,6 +186,7 @@ def fitB(dataMat,tiVec,saveDir,nTIsToFit,M0=1,alpha=1,saveFn='fitB',verbosity=5,
         if np.mod(iVox,nX*10)==0:
             np.save(saveFnPartial,fitVec)
             np.save(mseFnPartial,mseMat)
+            np.save(fitFnPartial,fit)
             if verbosity>=0:
                 print('fitB: Vox='+str(iVox)+' saving to '+saveFnPartial)
             printf('\n')
@@ -184,6 +194,7 @@ def fitB(dataMat,tiVec,saveDir,nTIsToFit,M0=1,alpha=1,saveFn='fitB',verbosity=5,
     eTime=time.time()-tStart;print('fitB: total time:',eTime)
     np.save(saveFnComplete,fitVec)
     np.save(mseFnComplete,mseMat)
+    np.save(fitFnComplete,fit)
     if verbosity>0:
         print('fitB: fitVec has size ', str(np.shape(fitVec)), ' and sum ',str(np.sum(fitVec)) )
         print('fitB: saving fitVec to file ', saveFnComplete)
@@ -234,7 +245,7 @@ def getFitMask(dataVol,tiVec,M0=1,alpha=1,minMean=-1,verbosity=1):
     return fitMask
 
 
-def makeFitMaskFile(subDir,id_dir,brainMaskFn,nBins=8,nTIs=5,nSlices=14,nX=64,nY=64,nReps=39,minMean=-1,saveNii=1):
+def makeFitMaskFile(subDir,id_dir,brainMaskFn,nBins=8,nTIs=5,nSlices=14,nX=64,nY=64,nReps=39,minMean=-1,pctThr=-1,saveNii=1,mode=0,percentile=0):
     """makeFitMaskFile: internal function for combining a threshold mask with brain mask in compliance pipeline.
        If you set minMean=-1 (the default) no mean threshold will be applied and you get your input mask back."""
     # use the brain mask and also screen each voxel to make a fit mask
@@ -252,19 +263,39 @@ def makeFitMaskFile(subDir,id_dir,brainMaskFn,nBins=8,nTIs=5,nSlices=14,nX=64,nY
     brainMask=np.squeeze(img.get_data());
 
     #do mean thresholding if that is requested
-    if minMean==-1:     #in this case the fitMask is just ones
+    if minMean == -1 and percentile == 0:     #no masking case
         print('makeFitMaskFile: no thresholding will be applied to input brain mask')
         fitMask=np.ones(np.shape(brainMask))
-    else:               # in this case threshold by the mean
+    if percentile == 0 and minMean > -1:                              #do some masking 
         print('makeFitMaskFile: thresholding on mean signal at ', str(minMean));
+        picoreMat=np.zeros((nX,nY,nSlices,nReps,nTIs))
+        picoreMat=VC_loadPicoreData(subDir, id_dir,verbosity=0)
         for iSlice in np.arange(0,nSlices,1):
             printf('.')
-            picoreMat=np.zeros((nX,nY,nSlices,nReps,nTIs))
-            picoreMat=VC_loadPicoreData(subDir, id_dir,verbosity=0)
             (phiCSVecOneSlice,junk)=loadPhiCSVecOneSlice(subDir,id_dir,iSlice+1,nSlices=nSlices,verbosity=0)
             dataVol5pt[:,:,iSlice,:,:]=loadDataToFit(picoreMat,1,nX,1,nY,iSlice+1,phiCSVecOneSlice,tiVec,nBins=8,nTIs=5)
         fitMask=getFitMask(dataVol5pt,tiVec,M0=1,alpha=1,minMean=minMean,verbosity=1)
 
+    if percentile > 0 and minMean == -1:
+        #do percentile masking and brain mask
+        picoreMat=np.zeros((nX,nY,nSlices,nReps,nTIs))
+        picoreMat=VC_loadPicoreData(subDir, id_dir,verbosity=0)
+        picoreMat=np.tile(brainMask[:,:,:,np.newaxis,np.newaxis],(1,1,1,78,7))*picoreMat
+        idxTagStart=0;idxCtrStart=1
+        deltaMat=picoreMat[:,:,:,idxCtrStart::2,:]-picoreMat[:,:,:,idxTagStart::2,:]
+    
+        #average over reps and TIs
+        tmpMat=np.mean(np.mean(deltaMat,3),3)
+        tmpMat=np.reshape(tmpMat,(np.int(nX*nY),np.int(nSlices)))
+        fitMask=np.zeros(np.shape(tmpMat))
+
+        thrVec=np.percentile( tmpMat,percentile,0)
+
+        for iThr in np.arange(0,nSlices,1):
+            fitMask[tmpMat[:,iThr]>thrVec[iThr],iThr]=1
+
+        fitMask=np.reshape(fitMask,(nX,nY,nSlices))
+ 
     #apply the mask
     mask=fitMask*brainMask
 

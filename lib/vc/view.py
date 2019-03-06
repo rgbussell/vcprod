@@ -1,9 +1,20 @@
 FIGURES_ONSCREEN=0
 PLOT_BLOCKING=0
 
+from vc.load import *
+from vc.calccomp import *
+
 #Data plotting functions
 import matplotlib.pyplot as plt
 import numpy as np
+
+def divide_nonzero(n,d,infVal=-1):
+    #divide matrix n by matrix d elementwise
+    #replace n/d with infVal where d=0
+    m=np.zeros(np.shape(n))
+    m=np.divide(n,d)
+    m[np.isnan(m)]=infVal
+    return m
 
 def hello():
 	print('hello from' + __name__ +' in vc view module')
@@ -297,12 +308,12 @@ def plot2DFit3Par(fitMat,fitMatType=0):
     plt.colorbar()
     return 1
 
-def sliceDataMontage(dataMat,fs=(40,10),xLab='',yLab='',title='',txtsz=15,dispFlag=0,cmap=''):
+def sliceDataMontage(dataMat,fs=(40,10),xLab='',yLab='',title='',txtsz=15,dispFlag=0,cmap='',saveFig=0):
     (nX,nY,nBins,nTIs)=np.shape(dataMat)
     dataMat=np.reshape(np.transpose(dataMat,(0,2,1,3)),(nX,nY*nBins,nTIs))
     dataMat=np.reshape( np.transpose(dataMat,(2,0,1) ),(nX*nTIs,nY*nBins))
     if FIGURES_ONSCREEN or dispFlag==1:
-        plt.figure(figsize=fs)
+        ax=plt.figure(figsize=fs)
         if cmap=='':
             plt.imshow(dataMat)
         else:
@@ -311,6 +322,14 @@ def sliceDataMontage(dataMat,fs=(40,10),xLab='',yLab='',title='',txtsz=15,dispFl
         plt.xticks([]);plt.yticks([]);plt.title(title,fontsize=txtsz)
         plt.colorbar();
         plt.ion();plt.show()
+    if saveFig:
+      if title=='':
+        title='untitled'
+      figFn=title+'.pdf'
+      figFn=figFn.replace(" ","_")
+      plt.tight_layout()
+      plt.savefig(figFn,bbox_inches='tight', pad_inches = 0, format='pdf',dpi=256)
+      #plt.savefig(figFn,);
 
 
 def plot2DFit3Par(fitMat,ABV_IDX=0,TD_IDX=1,SIGMA_IDX=2):
@@ -335,10 +354,6 @@ def plot2DFit3Par(fitMat,ABV_IDX=0,TD_IDX=1,SIGMA_IDX=2):
     plt.imshow(np.squeeze(fitMat[:,:,ABV_IDX]),interpolation='none',cmap='viridis')
     plt.title('ABV')
     plt.colorbar()
-    #print(np.shape(comp))
-    #plt.imshow(comp,interpolation='none',cmap='viridis')
-    #plt.title('comp frac')
-    #plt.colorbar()
     return 1
 
 
@@ -414,3 +429,137 @@ def make3x4(vol):
     tmp=np.reshape(tmp,(64*nRow,64,nCol))
     tmp=np.reshape(tmp,(64*nRow,64*nCol))
     return tmp
+
+#########
+def makeQAOutput( id_dir, subDir, procSubDir, pp, qaDir, M0,verb=0):
+  #procSubDir='vremoteproc/5TI/m0/'
+  if verb>0:
+    print("makeQAOutput called")
+  nX=64;nY=64;nSlices=14;nReps=78;nTIs=7
+  tiArr=np.arange(250,950,100)
+  idxTagStart=0;idxCtrStart=1
+  alpha=1
+
+  # Read the data and the mask
+  picoreMat=np.zeros((nX,nY,nSlices,nReps,nTIs))
+  picoreMat=VC_loadPicoreData(subDir, id_dir,verbosity=0)
+  phiCSMat=VC_loadPhiCS(subDir,id_dir,verbosity=0)
+  picoreMat=np.transpose(picoreMat,(1,0,2,3,4))
+
+  maskFn=subDir+'/fitMask.npy';
+  fitMask=np.transpose(np.load(maskFn),(1,0,2))
+  fitMask=np.ones(np.shape(fitMask))
+  picoreMat=np.tile(fitMask[:,:,:,np.newaxis,np.newaxis],(1,1,1,78,7))*picoreMat
+
+  #Prepare tag control combinations
+  deltaMat=picoreMat[:,:,:,idxCtrStart::2,:]-picoreMat[:,:,:,idxTagStart::2,:]
+  mTag=picoreMat[:,:,:,idxTagStart::2,:]
+  mCtr=picoreMat[:,:,:,idxCtrStart::2,:]
+  mCtrAve=np.mean(mCtr,3)
+  mTagMCtrAve=np.tile(np.reshape(mCtrAve,(nX,nY,nSlices,1,nTIs)),(1,1,1,int(nReps/2),1))-mTag
+  print('Input picore matrix shapes: \nmCtr: '+ str(np.shape(mCtr))+'\nmTag: '+ str(np.shape(mTag))+'\nmTagMCtrAve: '+ str((np.shape(mTagMCtrAve)))) 
+
+  #REad in some single voxel vectors and output a figure
+  x=30;y=30;z=3
+  mTagMCtrAveVec=np.reshape(mTagMCtrAve,(nX,nY,nSlices,int(nTIs*nReps/2)))[x,y,z,:]
+  mTagVec=np.reshape(mTag,(nX,nY,nSlices,int(nTIs*nReps/2)))
+  mCtrVec=np.reshape(mCtr,(nX,nY,nSlices,int(nTIs*nReps/2)))
+
+  plt.figure()
+  for x in np.arange(24,40,4):
+      for y in np.arange(24,40,4):
+          z=4
+          deltaMSeqVec=mCtrVec[x,y,z,:]-mTagVec[x,y,z,:]
+          plt.plot(deltaMSeqVec)
+  tmpFn=qaDir+'/singleVectors.png'
+  plt.savefig(tmpFn,bbox_inches='tight')
+
+  #####Calculate fracional CBF like map for qa####
+  cbfMap=np.mean(np.mean(deltaMat,3),3)
+  fracCbfMap=np.zeros(np.shape(mCtr))
+  tmpn=mCtr-mTag
+  tmpd=mCtr+mTag
+  tempfrac=divide_nonzero(tmpn,tmpd)
+  fracCbfMap=np.mean( tempfrac, 3 )
+  #fracCbfMap=np.mean((mCtr-mTag)/(mCtr+mTag),3)
+
+  img = nib.Nifti1Image(np.transpose(fracCbfMap,[1,0,2,3]), np.eye(4))
+  fn=qaDir+'/fracCbfMap.nii.gz'
+  nib.save(img, fn)
+
+  ####QA the physio coverage of cardiac phases####
+  phiCS=phiCSMat[(z-1)::nSlices,:] #select a slice (incl. t and c, and TI)
+  phiCSTag=phiCS[idxTagStart::2,:] #now only take tags for this slice
+
+  #vectorize the inputs
+  phiCSVec=np.reshape(phiCSTag,(273,))
+  tiVec=np.reshape(np.tile(tiArr,(39,1)),(273,))
+
+  dataVec=mTagMCtrAveVec
+
+  plt.plot(tiVec,phiCSVec,'.');
+  plt.title('$\Delta M$ samples at TI and cardiac phase',fontsize=15);
+  plt.xlabel('TI (ms)',fontsize=15);
+  plt.ylabel('$\phi_c$',fontsize=15)
+  tmpFn=qaDir+'/physioCoverage.png'
+  plt.savefig(tmpFn,bbox_inches='tight')
+
+  ##Calculate compliance maps##
+  ## Create compliance volume
+  nBins=8;nPars=3
+
+  compVol=np.zeros((nX,nY,nSlices))
+  abvVol=np.zeros((nX,nY,nSlices,3))
+  abvVolPhases=np.zeros((nX,nY,nSlices,2))
+  meanTdVol=np.zeros((nX,nY,nSlices))
+  meanDispVol=np.zeros((nX,nY,nSlices))
+
+  for curSlice in np.arange(0,nSlices,1):
+      phiCS=phiCSMat[(curSlice)::nSlices,:] #get phiCS for cur slice
+      phiCSTag=phiCS[idxTagStart::2,:] #now only take tags for this slice
+
+      #vectorize the inputs
+      phiCSVec=np.reshape(phiCSTag,(273,))
+      tiVec=np.reshape(np.tile(tiArr,(39,1)),(273,))
+
+      fitFn=subDir+'/'+procSubDir+'fitB_slice'+str(curSlice)+'.npy'
+      mseFn=subDir+'/'+procSubDir+'fitB_slice'+str(curSlice)+'_mse.npy'
+
+      fitVec=np.load(fitFn)
+      mseVec=np.load(mseFn)
+    
+      fitVec=np.tile(fitMask[:,:,curSlice,np.newaxis,np.newaxis],(1,1,1,8,3))*(np.reshape(fitVec,(nX,nY,nBins,nPars)))
+      mseMat=np.reshape(mseVec,(nX,nY,nBins))
+      mseMat=np.tile(fitMask[:,:,curSlice,np.newaxis],(1,1,nBins))*mseMat
+    
+      fitMat3Par=np.reshape(fitVec,(nX,nY,nBins,3))
+      fitMat3Par=np.transpose(fitMat3Par,(1,0,2,3))
+    
+      abvMat=calcAbvMatB(fitMat3Par,alpha=1,M0=M0)
+      compMat,abvMaxMat,abvMinMat,abvMaxIdxMat,abvMinIdxMat=calcComp(abvMat,tiVec,phiCSVec,pp=pp,method=3)
+      compVol[:,:,curSlice]=compMat
+      abvVol[:,:,curSlice,1]=abvMaxMat
+      abvVol[:,:,curSlice,0]=abvMinMat
+      print(np.shape(abvMat))
+      abvVol[:,:,curSlice,2]=np.mean(abvMat[:,:,:],2)
+      meanDispVol[:,:,curSlice]=np.mean(fitMat3Par[:,:,:,2],2)
+      meanTdVol[:,:,curSlice]=np.mean(fitMat3Par[:,:,:,1],2)
+
+  # generate qa outputs
+  qaDir=subDir+'/qa'
+
+  img = nib.Nifti1Image(np.transpose(compVol,[1,0,2]), np.eye(4))
+  fn=qaDir+'/compVol.nii.gz'
+  nib.save(img, fn)
+
+  img = nib.Nifti1Image(np.transpose(abvVol,[1,0,2,3]), np.eye(4))
+  fn=qaDir+'/abvVol.nii.gz'
+  nib.save(img, fn)
+
+  img = nib.Nifti1Image(np.transpose(meanTdVol,[1,0,2]), np.eye(4))
+  fn=qaDir+'/meanTdVol.nii.gz'
+  nib.save(img, fn)
+
+  img = nib.Nifti1Image(np.transpose(meanDispVol,[1,0,2]), np.eye(4))
+  fn=qaDir+'/meanDispVol.nii.gz'
+  nib.save(img, fn)
