@@ -8,11 +8,18 @@ pp=$3
 id_dir=$4
 uid=$5
 
+if [ ! -d $procDir ]; then
+  $sm ERROR 
+  echo procdir $procDir not found
+  echo EXITING
+  exit
+fi
+
+VC_runProcCmd=/apps/vc/bin/VC_runProc.py
 logFn=$procDir"/VC_runProc.log"
 
-PATH=$PATH:/home/rbussell/anaconda3/bin/
-source /home/rbussell/anaconda3/bin/activate | tee -a $logFn
-
+PATH=$PATH:$VC_PATH
+source $VC_ACTIVATE | tee -a $logFn
 
 echo $sm called. SHELL=$SHELL. Running in hostname `hostname`
 
@@ -32,4 +39,4 @@ which python
 python --version
 
 echo run the processing python code
-~/bin/vc/VC_runProc.py $procDir $M0 $pp $id_dir $uid
+$VC_runProcCmd $procDir $M0 $pp $id_dir $uid

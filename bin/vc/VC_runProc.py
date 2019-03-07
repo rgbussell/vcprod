@@ -11,16 +11,13 @@ DO_ONE_TEST_FIT=0
 print('VC_runProc.py called')
 
 #-----
-#Set up the path
-#-----
-vcModulePath='/home/rbussell/lib/'
-
-#-----
 #library imports
 #-----
 import os,sys
 import numpy as np
 
+#vcModulePath=os.environ['VC_PATH']+'/lib'
+vcModulePath='/apps/vc/lib'
 sys.path.append(vcModulePath)
 import vc
 from vc.load import *

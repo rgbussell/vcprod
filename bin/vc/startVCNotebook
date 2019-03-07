@@ -1,5 +1,0 @@
-#!/bin/sh
-
-
-cd /home/rbussell/notebooks/vcproc/notebooks
-jupyter notebook

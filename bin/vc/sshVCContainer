@@ -1,6 +1,0 @@
-#!/bin/sh
-
-containerName="rgbussell/vc:latest"
-
-containerId=`docker ps | grep $containerName | awk '{print $1, $2}' | awk '{print $1}'`
-docker exec -it $containerId /bin/bash

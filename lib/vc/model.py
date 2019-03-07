@@ -73,7 +73,7 @@ def getBolusModel(nPts=4000,bolusDuration=700,transitDelay=400,sigma=100,T1b=166
     
     #get dispersion kernel
     dispKernel=gaussian(t,transitDelay,sigma=sigma)
-    notDispKernel=notGaussian(t,transitDelay,sigma=sigma)
+    #notDispKernel=notGaussian(t,transitDelay,sigma=sigma)
     
     #make plug flow model
     plug=np.zeros(nPts)
@@ -81,12 +81,12 @@ def getBolusModel(nPts=4000,bolusDuration=700,transitDelay=400,sigma=100,T1b=166
     
     #convolve to get the dispersed bolus
     bolus=np.convolve(plug,dispKernel,'full')
-    notBolus=np.convolve(plug,notDispKernel,'full')
+    #notBolus=np.convolve(plug,notDispKernel,'full')
 
     #add relaxation
     t1Atten=np.exp(-np.arange(np.shape(bolus)[0])/T1b)
     bolus=bolus*t1Atten
-    notBolus=notBolus*t1Atten
+    #notBolus=notBolus*t1Atten
     
     #scale the bolus
     if norm==1:
