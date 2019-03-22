@@ -1,5 +1,5 @@
 #!/bin/bash
-sm="$0:"
+echo sm="$0:"
 
 #Deal with input
 procDir=$1
